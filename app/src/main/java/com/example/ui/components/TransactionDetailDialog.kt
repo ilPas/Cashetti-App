@@ -52,14 +52,14 @@ fun TransactionDetailDialog(
                 DetailRow("Importo", String.format(Locale.ITALY, "%.2f €", kotlin.math.abs(expense.amount)))
                 
                 val accountFriendly = when (expense.accountType) {
-                    "SERBATOIO_PERSONALE", "DISCREZIONALE_VARIABILE" -> "👤 Serbatoio Personale"
+                    "SERBATOIO_PERSONALE", "DISCREZIONALE_VARIABILE" -> "👤 Cassetto Personale"
                     "SERBATOIO_GINEVRA" -> "🏠 Fondo Imprevisti / Ginevra"
                     "ESSENZIALE_REALE" -> "🏢 Costi Fissi Essenziali"
                     "FONDO_EVENTI_DEPOSIT" -> "🎁 Fondo Risparmi/Eventi (+)"
                     "FONDO_EVENTI_WITHDRAWAL" -> "🎁 Fondo Risparmi/Eventi (-)"
                     else -> expense.accountType
                 }
-                DetailRow("Conto / Serbatoio", accountFriendly)
+                DetailRow("Conto / Cassetto", accountFriendly)
                 DetailRow("Categoria", expense.category)
                 DetailRow("Necessità", if (expense.isNecessary) "✅ Spesa strettamente necessaria" else "⚡ Acquisto d'impulso (Grief spending)")
                 DetailRow("Statistiche", if (expense.excludeFromStats) "🚫 Esclusa dalle statistiche (Spesa eccezionale)" else "📊 Inclusa nei report e medie regolari")

@@ -254,10 +254,10 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                // Macro-feature 4: Architettura a Doppio Serbatoio (Personale vs Ginevra)
+                // Macro-feature 4: Architettura a Doppio Cassetto (Personale vs Ginevra)
                 item {
                     Text(
-                        text = "I Due Serbatoi del Mese",
+                        text = "I Due Cassetti del Mese",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = AppColorPalette.TextPrimary
@@ -268,11 +268,11 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Serbatoio 1: Personale (Fixed limit, resets monthly)
+                        // Cassetto 1: Personale (Fixed limit, resets monthly)
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .testTag("tank_personale_card"),
+                                .testTag("cassetto_personale_card"),
                             shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(containerColor = AppColorPalette.SurfaceCard)
                         ) {
@@ -353,11 +353,11 @@ fun DashboardScreen(
                             }
                         }
 
-                        // Serbatoio 2: Casa / Ginevra (Imprevisti with Rollover!)
+                        // Cassetto 2: Casa / Ginevra (Imprevisti with Rollover!)
                         Card(
                             modifier = Modifier
                                 .weight(1f)
-                                .testTag("tank_ginevra_card"),
+                                .testTag("cassetto_ginevra_card"),
                             shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(containerColor = AppColorPalette.SurfaceCard)
                         ) {

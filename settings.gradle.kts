@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Budget Control"
+rootProject.name = "Cashetti App"
 
 include(":app")

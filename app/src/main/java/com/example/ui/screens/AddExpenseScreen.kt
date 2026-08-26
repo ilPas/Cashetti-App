@@ -94,7 +94,7 @@ fun AddExpenseScreen(
     }
 
     val accounts = listOf(
-        "SERBATOIO_PERSONALE" to "👤 Serbatoio Personale",
+        "SERBATOIO_PERSONALE" to "👤 Cassetto Personale",
         "SERBATOIO_GINEVRA" to "🏠 Casa / Ginevra (Imprevisti)",
         "ESSENZIALE_REALE" to "🏢 Costi Fissi Essenziali",
         "FONDO_EVENTI_DEPOSIT" to "🎁 Fondo Risparmi (+)",
@@ -134,10 +134,10 @@ fun AddExpenseScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // Macro-feature 4: Serbatoio / Conto Selection
+                // Macro-feature 4: Cassetto / Conto Selection
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Scegli Serbatoio o Conto:",
+                        text = "Scegli Cassetto o Conto:",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = AppColorPalette.TextPrimary

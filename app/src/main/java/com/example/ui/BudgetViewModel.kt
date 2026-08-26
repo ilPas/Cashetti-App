@@ -30,9 +30,9 @@ import java.util.Locale
 
 data class BudgetUiState(
     val resetDay: Int = 27,
-    val monthlyCap: Double = 700.0, // Serbatoio 1 (Personale)
+    val monthlyCap: Double = 700.0, // Cassetto 1 (Personale)
     val budgetPersonale: Double = 700.0,
-    val budgetGinevra: Double = 180.0, // Serbatoio 2 (Fondo Imprevisti / Ginevra)
+    val budgetGinevra: Double = 180.0, // Cassetto 2 (Fondo Imprevisti / Ginevra)
     val ginevraRollover: Double = 0.0,
     val ginevraTotalAvailable: Double = 180.0,
     val ginevraSpent: Double = 0.0,
@@ -202,8 +202,8 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         }
         val essentialTotalSpent = essentialExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
 
-        // --- Serbatoio 1 (Personale / Svago) ---
-        // Il serbatoio personale ha un cap mensile fisso (es. 700€), da cui vengono detratti i costi ricorrenti/abbonamenti
+        // --- Cassetto 1 (Personale / Svago) ---
+        // Il cassetto personale ha un cap mensile fisso (es. 700€), da cui vengono detratti i costi ricorrenti/abbonamenti
         // e le spese personali non eccezionali del ciclo corrente. Si resetta all'inizio di ogni ciclo.
         val personaleExpensesInCycle = expensesList.filter { expense ->
             (expense.accountType == "SERBATOIO_PERSONALE" || expense.accountType == "DISCREZIONALE_VARIABILE") &&
@@ -212,7 +212,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
         val personaleRemaining = budgetPersonale - recurringTotal - personaleSpent
 
-        // --- Serbatoio 2 (Fondo Imprevisti / Ginevra con Rollover Dinamico) ---
+        // --- Cassetto 2 (Fondo Imprevisti / Ginevra con Rollover Dinamico) ---
         // Calcolo del Rollover: si analizzano tutti i cicli di fatturazione pregressi a ritroso a partire dal più vecchio movimento.
         // In ciascun ciclo pregresso, il surplus (budgetGinevra - spese) o deficit viene sommato al rollover cumulativo.
         val initialGinevraRollover = settingsList.find { it.key == "ginevra_initial_rollover" }?.value?.toDoubleOrNull() ?: 0.0
@@ -247,7 +247,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val ginevraRemaining = ginevraTotalAvailable - ginevraSpent
 
         // --- Hero Number: Saldo Dinamico del 'Budget Mensile Spendibile' ---
-        // Somma dinamica e reattiva in tempo reale dei due serbatoi (Personale + Fondo Imprevisti/Ginevra)
+        // Somma dinamica e reattiva in tempo reale dei due cassetti (Personale + Fondo Imprevisti/Ginevra)
         val totalMonthlySpendable = (personaleRemaining + ginevraRemaining)
 
         // Compatibility fields

@@ -306,7 +306,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = budgetPersonaleText,
                             onValueChange = { budgetPersonaleText = it },
-                            label = { Text("Budget Serbatoio Personale (€)") },
+                            label = { Text("Budget Cassetto Personale (€)") },
                             placeholder = { Text("es. 700") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
@@ -322,7 +322,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = budgetGinevraText,
                             onValueChange = { budgetGinevraText = it },
-                            label = { Text("Budget Serbatoio Casa/Ginevra (€) [con Rollover]") },
+                            label = { Text("Budget Cassetto Casa/Ginevra (€) [con Rollover]") },
                             placeholder = { Text("es. 180") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
