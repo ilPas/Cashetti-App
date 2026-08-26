@@ -1,0 +1,283 @@
+   118	
+   119	    AlertDialog(
+   120	        onDismissRequest = onDismiss,
+   121	        containerColor = MaterialTheme.colorScheme.surface,
+   122	        titleContentColor = MaterialTheme.colorScheme.onSurface,
+   123	        textContentColor = MaterialTheme.colorScheme.onSurface,
+   124	        title = {
+   125	            Row(
+   126	                verticalAlignment = Alignment.CenterVertically,
+   127	                modifier = Modifier.testTag("detected_transaction_dialog_title")
+   128	            ) {
+   129	                Surface(
+   130	                    shape = RoundedCornerShape(10.dp),
+   131	                    color = MaterialTheme.colorScheme.primaryContainer,
+   132	                    modifier = Modifier.padding(end = 10.dp)
+   133	                ) {
+   134	                    Icon(
+   135	                        imageVector = Icons.Default.NotificationsActive,
+   136	                        contentDescription = "Notifica Spesa",
+   137	                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+   138	                        modifier = Modifier.padding(8.dp)
+   139	                    )
+   140	                }
+   141	                Column {
+   142	                    Text(
+   143	                        text = "Spesa Rilevata da Notifica!",
+   144	                        style = MaterialTheme.typography.titleMedium,
+   145	                        fontWeight = FontWeight.Bold,
+   146	                        color = MaterialTheme.colorScheme.onSurface
+   147	                    )
+   148	                    Text(
+   149	                        text = "Origine: ${transaction.appName}",
+   150	                        style = MaterialTheme.typography.bodySmall,
+   151	                        color = MaterialTheme.colorScheme.onSurfaceVariant
+   152	                    )
+   153	                }
+   154	            }
+   155	        },
+   156	        text = {
+   157	            Column(
+   158	                modifier = Modifier
+   159	                    .fillMaxWidth()
+   160	                    .verticalScroll(rememberScrollState()),
+   161	                verticalArrangement = Arrangement.spacedBy(14.dp)
+   162	            ) {
+   163	                // Detected info card
+   164	                Card(
+   165	                    modifier = Modifier.fillMaxWidth(),
+   166	                    shape = RoundedCornerShape(12.dp),
+   167	                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+   168	                ) {
+   169	                    Column(modifier = Modifier.padding(12.dp)) {
+   170	                        Text(
+   171	                            text = "Dettagli Notifica Originale:",
+   172	                            style = MaterialTheme.typography.labelSmall,
+   173	                            fontWeight = FontWeight.Bold,
+   174	                            color = MaterialTheme.colorScheme.primary
+   175	                        )
+   176	                        Spacer(modifier = Modifier.height(2.dp))
+   177	                        Text(
+   178	                            text = "${transaction.originalAmount} ${transaction.currencyCode} (${transaction.merchant})",
+   179	                            style = MaterialTheme.typography.bodyMedium,
+   180	                            fontWeight = FontWeight.Bold,
+   181	                            color = MaterialTheme.colorScheme.onSurfaceVariant
+   182	                        )
+   183	                        if (transaction.currencyCode != "EUR") {
+   184	                            Text(
+   185	                                text = "Convertito stima: ~${String.format(Locale.ITALY, "%.2f €", transaction.estimatedEurAmount)}",
+   186	                                style = MaterialTheme.typography.bodySmall,
+   187	                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+   188	                            )
+   189	                        }
+   190	                    }
+   191	                }
+   192	
+   193	                // EUR Amount input
+   194	                OutlinedTextField(
+   195	                    value = eurAmountText,
+   196	                    onValueChange = {
+   197	                        eurAmountText = it.replace(',', '.')
+   198	                        errorMessage = null
+   199	                    },
+   200	                    label = { Text("Importo Finale in Euro (€)") },
+   201	                    leadingIcon = {
+   202	                        Icon(
+   203	                            Icons.Default.Euro,
+   204	                            contentDescription = null,
+   205	                            tint = MaterialTheme.colorScheme.primary
+   206	                        )
+   207	                    },
+   208	                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+   209	                    colors = dialogTextFieldColors,
+   210	                    singleLine = true,
+   211	                    modifier = Modifier
+   212	                        .fillMaxWidth()
+   213	                        .testTag("detected_amount_input"),
+   214	                    shape = RoundedCornerShape(12.dp)
+   215	                )
+   216	
+   217	                // Account Choice
+   218	                Text(
+   219	                    text = "Conto di Addebito:",
+   220	                    style = MaterialTheme.typography.labelLarge,
+   221	                    fontWeight = FontWeight.SemiBold,
+   222	                    color = MaterialTheme.colorScheme.onSurface
+   223	                )
+   224	                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+   225	                    accountLabels.forEachIndexed { idx, label ->
+   226	                        SegmentedButton(
+   227	                            selected = selectedAccountIndex == idx,
+   228	                            onClick = { selectedAccountIndex = idx },
+   229	                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = accountLabels.size),
+   230	                            colors = SegmentedButtonDefaults.colors(
+   231	                                activeContainerColor = MaterialTheme.colorScheme.primary,
+   232	                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+   233	                                inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+   234	                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+   235	                            )
+   236	                        ) {
+   237	                            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+   238	                        }
+   239	                    }
+   240	                }
+   241	
+   242	                // Category Chips
+   243	                Text(
+   244	                    text = "Categorizzazione:",
+   245	                    style = MaterialTheme.typography.labelLarge,
+   246	                    fontWeight = FontWeight.SemiBold,
+   247	                    color = MaterialTheme.colorScheme.onSurface
+   248	                )
+   249	                FlowRow(
+   250	                    modifier = Modifier.fillMaxWidth(),
+   251	                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+   252	                    verticalArrangement = Arrangement.spacedBy(6.dp)
+   253	                ) {
+   254	                    availableCategories.forEach { cat ->
+   255	                        val isSelected = selectedCategory == cat
+   256	                        FilterChip(
+   257	                            selected = isSelected,
+   258	                            onClick = { selectedCategory = cat },
+   259	                            label = {
+   260	                                Text(
+   261	                                    cat,
+   262	                                    style = MaterialTheme.typography.bodySmall,
+   263	                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+   264	                                )
+   265	                            },
+   266	                            colors = FilterChipDefaults.filterChipColors(
+   267	                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+   268	                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+   269	                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+   270	                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+   271	                            ),
+   272	                            leadingIcon = if (isSelected) {
+   273	                                { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary) }
+   274	                            } else null
+   275	                        )
+   276	                    }
+   277	                }
+   278	
+   279	                // Amortization (Ammortamento su più mesi) Section
+   280	                Card(
+   281	                    modifier = Modifier.fillMaxWidth(),
+   282	                    shape = RoundedCornerShape(16.dp),
+   283	                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+   284	                ) {
+   285	                    Column(
+   286	                        modifier = Modifier.padding(12.dp),
+   287	                        verticalArrangement = Arrangement.spacedBy(8.dp)
+   288	                    ) {
+   289	                        Row(
+   290	                            modifier = Modifier.fillMaxWidth(),
+   291	                            horizontalArrangement = Arrangement.SpaceBetween,
+   292	                            verticalAlignment = Alignment.CenterVertically
+   293	                        ) {
+   294	                            Row(verticalAlignment = Alignment.CenterVertically) {
+   295	                                Icon(
+   296	                                    imageVector = Icons.Default.Schedule,
+   297	                                    contentDescription = null,
+   298	                                    tint = MaterialTheme.colorScheme.primary,
+   299	                                    modifier = Modifier.padding(end = 6.dp)
+   300	                                )
+   301	                                Text(
+   302	                                    text = "Ammortamento su più mesi",
+   303	                                    style = MaterialTheme.typography.titleSmall,
+   304	                                    fontWeight = FontWeight.Bold,
+   305	                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+   306	                                )
+   307	                            }
+   308	                            Switch(
+   309	                                checked = isAmortizationEnabled,
+   310	                                onCheckedChange = { isAmortizationEnabled = it },
+   311	                                modifier = Modifier.testTag("amortization_switch")
+   312	                            )
+   313	                        }
+   314	
+   315	                        if (isAmortizationEnabled) {
+   316	                            Text(
+   317	                                text = "Suddividi l'impatto di questa spesa in rate mensili uguali sui prossimi cicli:",
+   318	                                style = MaterialTheme.typography.bodySmall,
+   319	                                color = MaterialTheme.colorScheme.onSurfaceVariant
+   320	                            )
+   321	
+   322	                            // Months selector
+   323	                            FlowRow(
+   324	                                modifier = Modifier.fillMaxWidth(),
+   325	                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+   326	                            ) {
+   327	                                monthOptions.forEach { m ->
+   328	                                    val isMSelected = amortizationMonths == m
+   329	                                    FilterChip(
+   330	                                        selected = isMSelected,
+   331	                                        onClick = { amortizationMonths = m },
+   332	                                        label = { Text("$m Mesi") },
+   333	                                        colors = FilterChipDefaults.filterChipColors(
+   334	                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+   335	                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+   336	                                            containerColor = MaterialTheme.colorScheme.surface,
+   337	                                            labelColor = MaterialTheme.colorScheme.onSurface
+   338	                                        )
+   339	                                    )
+   340	                                }
+   341	                            }
+   342	
+   343	                            val parsedTotal = eurAmountText.toDoubleOrNull() ?: 0.0
+   344	                            val monthlyQuota = if (amortizationMonths > 0) parsedTotal / amortizationMonths else 0.0
+   345	
+   346	                            Surface(
+   347	                                shape = RoundedCornerShape(8.dp),
+   348	                                color = MaterialTheme.colorScheme.primaryContainer
+   349	                            ) {
+   350	                                Text(
+   351	                                    text = "Quota mensile: ${String.format(Locale.ITALY, "%.2f €", monthlyQuota)} / mese per $amortizationMonths mesi",
+   352	                                    style = MaterialTheme.typography.labelSmall,
+   353	                                    fontWeight = FontWeight.Bold,
+   354	                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+   355	                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+   356	                                )
+   357	                            }
+   358	                        }
+   359	                    }
+   360	                }
+   361	
+   362	                // Note Field
+   363	                OutlinedTextField(
+   364	                    value = noteText,
+   365	                    onValueChange = { noteText = it },
+   366	                    label = { Text("Nota / Descrizione") },
+   367	                    singleLine = true,
+   368	                    modifier = Modifier.fillMaxWidth(),
+   369	                    colors = dialogTextFieldColors,
+   370	                    shape = RoundedCornerShape(12.dp)
+   371	                )
+   372	
+   373	                if (errorMessage != null) {
+   374	                    Text(
+   375	                        text = errorMessage!!,
+   376	                        color = MaterialTheme.colorScheme.error,
+   377	                        style = MaterialTheme.typography.bodySmall
+   378	                    )
+   379	                }
+   380	            }
+   381	        },
+   382	        confirmButton = {
+   383	            Button(
+   384	                onClick = {
+   385	                    val parsed = eurAmountText.toDoubleOrNull()
+   386	                    if (parsed == null || parsed <= 0) {
+   387	                        errorMessage = "Inserisci un importo in Euro valido."
+   388	                    } else {
+   389	                        val finalAmortization = if (isAmortizationEnabled) amortizationMonths else 1
+   390	                        onConfirmExpense(
+   391	                            currentAccountType,
+   392	                            parsed,
+   393	                            selectedCategory,
+   394	                            noteText,
+   395	                            transaction.merchant,
+   396	                            finalAmortization
+   397	                        )
+   398	                    }
+   399	                },
+   400	                modifier = Modifier.testTag("confirm_detected_expense_button")

@@ -1,0 +1,6 @@
+{
+  "name": "Budget Control",
+  "description": "App nativa per il tracciamento delle spese personali con gestione dei tre conti: Discrezionale, Fondo Eventi e Capitale Sicurezza.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1 @@
+sed -i '/onExportCsv = { context ->/i \                    onSimulateNotification = { merchant, amount, currency, appName ->\n                        viewModel.simulateNotificationDetection(merchant, amount, currency, appName)\n                    },' app/src/main/java/com/example/MainActivity.kt

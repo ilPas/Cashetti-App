@@ -1,0 +1,5 @@
+class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
+
+    private val referenceTimeState = MutableStateFlow(System.currentTimeMillis())
+
+    val pendingTransaction: StateFlow<DetectedTransaction?> = PaymentNotificationManager.pendingTransaction
