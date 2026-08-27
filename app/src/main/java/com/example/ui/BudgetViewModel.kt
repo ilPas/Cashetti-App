@@ -40,6 +40,7 @@ data class BudgetUiState(
     val personaleSpent: Double = 0.0,
     val personaleRemaining: Double = 700.0,
     val totalMonthlySpendable: Double = 880.0, // Hero number in Home
+    val dailyBudget: Double = 0.0, // Budget giornaliero
     val daysRemainingInCycle: Int = 0,
     val liquidity: Double = 0.0,
     val investments: Double = 0.0,
@@ -249,6 +250,23 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         // --- Hero Number: Saldo Dinamico del 'Budget Mensile Spendibile' ---
         // Somma dinamica e reattiva in tempo reale dei due cassetti (Personale + Fondo Imprevisti/Ginevra)
         val totalMonthlySpendable = (personaleRemaining + ginevraRemaining)
+        
+        val calendar = java.util.Calendar.getInstance()
+        calendar.timeInMillis = refTime
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val startOfToday = calendar.timeInMillis
+
+        val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
+        val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        
+        val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
+        val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
+        val startOfDayDailyBudget = if (daysRemainingInCycle > 0) remainingBeforeToday / daysRemainingInCycle else remainingBeforeToday
+        val dailyBudget = startOfDayDailyBudget - spentToday
 
         // Compatibility fields
         val discExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
@@ -319,6 +337,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             personaleSpent = personaleSpent,
             personaleRemaining = personaleRemaining,
             totalMonthlySpendable = totalMonthlySpendable,
+            dailyBudget = dailyBudget,
             daysRemainingInCycle = daysRemainingInCycle,
             liquidity = liquiditySetting,
             investments = investmentsSetting,

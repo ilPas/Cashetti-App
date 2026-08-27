@@ -2,15 +2,15 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
         <shape>
-            <solid android:color="#333333" />
-            <corners android:radius="4dp" />
+            <corners android:radius="3dp" />
+            <solid android:color="#332D41" /> <!-- Surface Variant Dark -->
         </shape>
     </item>
     <item android:id="@android:id/progress">
         <clip>
             <shape>
-                <solid android:color="#00D084" />
-                <corners android:radius="4dp" />
+                <corners android:radius="3dp" />
+                <solid android:color="#D0BCFF" /> <!-- Primary Dark -->
             </shape>
         </clip>
     </item>

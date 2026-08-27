@@ -229,16 +229,38 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = AppColorPalette.SurfaceCard.copy(alpha = 0.3f),
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Ciclo: ${state.currentCycleLabel}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColorPalette.TextPrimary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = AppColorPalette.SurfaceCard.copy(alpha = 0.3f),
+                    ) {
+                        Text(
+                            text = "Ciclo: ${state.currentCycleLabel}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColorPalette.TextPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f),
+                    ) {
+                        val sign = if (state.dailyBudget < 0) "-" else ""
+                        val formattedDaily = String.format(Locale.ITALY, "%s€ %.2f", sign, kotlin.math.abs(state.dailyBudget))
+                        Text(
+                            text = "Oggi: $formattedDaily",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
         }

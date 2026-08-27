@@ -27,6 +27,11 @@ class BudgetWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        private fun formatCurrency(amount: Double): String {
+            val sign = if (amount < 0) "-" else ""
+            return String.format(Locale.ITALY, "%s€ %.2f", sign, kotlin.math.abs(amount))
+        }
+
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.widget_budget)
             
@@ -40,35 +45,87 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                 try {
                     val db = AppDatabase.getDatabase(context)
                     val repo = BudgetRepository(db.budgetDao())
-                    
+                        
                     val settings = repo.allSettings.first()
                     val resetDay = settings.find { it.key == "reset_day" }?.value?.toIntOrNull() ?: 27
-                    val monthlyCap = settings.find { it.key == "monthly_cap" }?.value?.toDoubleOrNull() ?: 673.0
+                    val budgetPersonale = settings.find { it.key == "monthly_cap" }?.value?.toDoubleOrNull() ?: 700.0
+                    val budgetGinevra = settings.find { it.key == "ginevra_monthly_cap" }?.value?.toDoubleOrNull() ?: 180.0
 
-                    val (cycleStart, cycleEnd) = BillingCycleUtils.getCycleRange(System.currentTimeMillis(), resetDay)
+                    val now = System.currentTimeMillis()
+                    val (cycleStart, cycleEnd) = BillingCycleUtils.getCycleRange(now, resetDay)
+                    val daysRemaining = (((cycleEnd - now).coerceAtLeast(0L)) / (24 * 60 * 60 * 1000L)).toInt() + 1
 
                     val expenses = repo.allExpenses.first()
-                    val discretionaryExpenses = expenses.filter { 
-                        it.accountType == "DISCREZIONALE_VARIABILE" && it.dateMillis in cycleStart..cycleEnd 
+                    
+                    val personaleExpensesInCycle = expenses.filter { 
+                        (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE") && 
+                        it.dateMillis in cycleStart..cycleEnd 
                     }
-                    val totalSpent = discretionaryExpenses.sumOf { it.amount }
-
+                    val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    
                     val subs = repo.allSubscriptions.first()
-                    val activeSubs = subs.filter { it.isActive }.sumOf { it.amount }
+                    val recurringTotal = subs.filter { it.isActive }.sumOf { it.amount }
+                    val personaleRemaining = budgetPersonale - recurringTotal - personaleSpent
 
-                    val variableBudgetAvailable = monthlyCap - activeSubs
-                    val remainingDiscretionary = variableBudgetAvailable - totalSpent
+                    // Calcolo Rollover
+                    val initialGinevraRollover = settings.find { it.key == "ginevra_initial_rollover" }?.value?.toDoubleOrNull() ?: 0.0
+                    val ginevraExpenses = expenses.filter { it.accountType == "SERBATOIO_GINEVRA" }
+                    var historicalRollover = 0.0
+                    if (ginevraExpenses.isNotEmpty()) {
+                        val earliestTime = ginevraExpenses.minOf { it.dateMillis }
+                        var testRef = cycleStart - 1000L
+                        val visitedCycles = mutableSetOf<Pair<Long, Long>>()
+                        while (testRef >= earliestTime) {
+                            val (pStart, pEnd) = BillingCycleUtils.getCycleRange(testRef, resetDay)
+                            if (visitedCycles.add(Pair(pStart, pEnd))) {
+                                val pSpent = expenses.filter {
+                                    it.accountType == "SERBATOIO_GINEVRA" && !it.excludeFromStats && it.dateMillis in pStart..pEnd
+                                }.sumOf { kotlin.math.abs(it.amount) }
+                                historicalRollover += (budgetGinevra - pSpent)
+                            }
+                            testRef = pStart - 1000L
+                        }
+                    }
+                    val ginevraRollover = initialGinevraRollover + historicalRollover
+                    val ginevraTotalAvailable = budgetGinevra + ginevraRollover
+                    val ginevraExpensesInCycle = expenses.filter { 
+                        it.accountType == "SERBATOIO_GINEVRA" && it.dateMillis in cycleStart..cycleEnd 
+                    }
+                    val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    val ginevraRemaining = ginevraTotalAvailable - ginevraSpent
 
+                    val totalMonthlySpendable = personaleRemaining + ginevraRemaining
+                    
+                    // Budget Giornaliero Rimanente
+                    val calendar = java.util.Calendar.getInstance()
+                    calendar.timeInMillis = now
+                    calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(java.util.Calendar.MINUTE, 0)
+                    calendar.set(java.util.Calendar.SECOND, 0)
+                    calendar.set(java.util.Calendar.MILLISECOND, 0)
+                    val startOfToday = calendar.timeInMillis
+
+                    val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
+                    val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+
+                    val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
+                    val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
+                    val startOfDayDailyBudget = if (daysRemaining > 0) remainingBeforeToday / daysRemaining else remainingBeforeToday
+                    val dailyBudget = startOfDayDailyBudget - spentToday
+                    
+                    // Progress bar calculation
+                    val budgetMax = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
                     val progressMax = 100
-                    val progress = if (variableBudgetAvailable > 0) {
-                        ((totalSpent / variableBudgetAvailable).coerceIn(0.0, 1.0) * progressMax).toInt()
+                    val spentTotal = personaleSpent + ginevraSpent
+                    val progress = if (budgetMax > 0) {
+                        ((spentTotal / budgetMax).coerceIn(0.0, 1.0) * progressMax).toInt()
                     } else 0
 
                     // Update UI on main thread
                     CoroutineScope(Dispatchers.Main).launch {
-                        views.setTextViewText(R.id.widget_remaining_text, String.format(Locale.ITALY, "€%.2f", remainingDiscretionary))
-                        views.setTextViewText(R.id.widget_spent_text, String.format(Locale.ITALY, "€%.2f", totalSpent))
-                        views.setTextViewText(R.id.widget_cap_text, String.format(Locale.ITALY, "€%.0f", variableBudgetAvailable))
+                        views.setTextViewText(R.id.widget_remaining_text, formatCurrency(totalMonthlySpendable))
+                        views.setTextViewText(R.id.widget_daily_text, formatCurrency(dailyBudget))
                         views.setProgressBar(R.id.widget_progress_bar, progressMax, progress, false)
                         
                         appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -80,6 +137,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
             
             // Initial placeholder while loading
             views.setTextViewText(R.id.widget_remaining_text, "...")
+            views.setTextViewText(R.id.widget_daily_text, "...")
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
         
