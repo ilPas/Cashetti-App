@@ -4,67 +4,72 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Cabinet Body (White) -->
-    <path 
-        android:fillColor="#FAFAFA" 
-        android:strokeColor="#1E1E1E" 
-        android:strokeWidth="4" 
-        android:strokeLineJoin="round"
-        android:pathData="M28,34 h52 v46 h-52 z"/>
-        
-    <!-- Drawer Hole (Dark) -->
-    <path 
-        android:fillColor="#1E1E1E" 
-        android:pathData="M32,38 h44 v24 h-44 z"/>
-        
-    <!-- Money Bill (Green) -->
-    <path 
-        android:fillColor="#4CAF50" 
-        android:strokeColor="#1E1E1E" 
-        android:strokeWidth="3" 
-        android:strokeLineJoin="round"
-        android:pathData="M42,24 h24 v28 h-24 z"/>
-        
-    <!-- Money Bill Detail (Dollar sign stand-in) -->
-    <path 
-        android:fillColor="#1E1E1E" 
-        android:pathData="M52,30 h4 v12 h-4 z"/>
-    <path 
-        android:strokeColor="#1E1E1E" 
-        android:strokeWidth="2"
-        android:pathData="M46,30 h3 M59,30 h3 M46,36 h3 M59,36 h3 M46,42 h3 M59,42 h3"/>
-        
-    <!-- Gold Coin -->
-    <path 
-        android:fillColor="#FFD54F" 
-        android:strokeColor="#1E1E1E" 
-        android:strokeWidth="3" 
-        android:pathData="M34,42 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0"/>
-    <!-- Gold Coin Inner -->
-    <path 
-        android:fillColor="#FFB300" 
-        android:pathData="M38,42 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"/>
-        
-    <!-- Drawer Front (Orange) -->
-    <path 
-        android:fillColor="#FF9800" 
-        android:strokeColor="#1E1E1E" 
-        android:strokeWidth="4" 
-        android:strokeLineJoin="round"
-        android:pathData="M24,52 h60 v28 h-60 z"/>
-        
-    <!-- Drawer Inner Lip (Shadow/Depth) -->
-    <path 
-        android:fillColor="#F57C00" 
-        android:pathData="M26,54 h56 v4 h-56 z"/>
-        
-    <!-- Handle -->
-    <path 
-        android:fillColor="#1E1E1E" 
-        android:pathData="M44,62 h20 v8 h-20 z"/>
-    <path 
-        android:fillColor="#FF9800" 
-        android:pathData="M48,66 h12 v4 h-12 z"/>
+
+    <!-- Group 1: Left Credit Card (Tilted Left) -->
+    <group
+        android:pivotX="36"
+        android:pivotY="44"
+        android:rotation="-14">
+        <!-- Card Body -->
+        <path
+            android:fillColor="#15151B"
+            android:pathData="M26,33 h20 a2,2 0 0,1 2,2 v12 a2,2 0 0,1 -2,2 h-20 a2,2 0 0,1 -2,-2 v-12 a2,2 0 0,1 2,-2 z" />
+        <!-- Gold Magnetic Stripe -->
+        <path
+            android:fillColor="#F6C54A"
+            android:pathData="M24,36 h24 v3 h-24 z" />
+    </group>
+
+    <!-- Group 2: Right Receipt Card (Tilted Right) -->
+    <group
+        android:pivotX="68"
+        android:pivotY="44"
+        android:rotation="12">
+        <!-- Card Body -->
+        <path
+            android:fillColor="#F9CE60"
+            android:pathData="M58.5,32 h19 a2.5,2.5 0 0,1 2.5,2.5 v13 a2.5,2.5 0 0,1 -2.5,2.5 h-19 a2.5,2.5 0 0,1 -2.5,-2.5 v-13 a2.5,2.5 0 0,1 2.5,-2.5 z" />
+        <!-- Top Text Line -->
+        <path
+            android:fillColor="#B97410"
+            android:pathData="M60,36.5 h15 a1,1 0 0,1 1,1 v0 a1,1 0 0,1 -1,1 h-15 a1,1 0 0,1 -1,-1 v0 a1,1 0 0,1 1,-1 z" />
+        <!-- Bottom Text Line -->
+        <path
+            android:fillColor="#B97410"
+            android:pathData="M60,40.5 h11 a1,1 0 0,1 1,1 v0 a1,1 0 0,1 -1,1 h-11 a1,1 0 0,1 -1,-1 v0 a1,1 0 0,1 1,-1 z" />
+    </group>
+
+    <!-- Group 3: White Drawer (Cassetto) Container -->
+    <group>
+        <!-- Drawer Box -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M33,47 h42 a4,4 0 0,1 4,4 v13 a4,4 0 0,1 -4,4 h-42 a4,4 0 0,1 -4,-4 v-13 a4,4 0 0,1 4,-4 z" />
+        <!-- Drawer Handle Slit -->
+        <path
+            android:fillColor="#111116"
+            android:pathData="M50.2,54 h7.6 a1.2,1.2 0 0,1 1.2,1.2 v0 a1.2,1.2 0 0,1 -1.2,1.2 h-7.6 a1.2,1.2 0 0,1 -1.2,-1.2 v0 a1.2,1.2 0 0,1 1.2,-1.2 z" />
+    </group>
+
+    <!-- Group 4: Gold Coin with 'C' Symbol (Center Front) -->
+    <group>
+        <!-- Outer Golden Glow / Soft Ring -->
+        <path
+            android:fillColor="#FBD878"
+            android:pathData="M51.5,38.3 a8.2,8.2 0 1,0 0.01,0 Z" />
+        <!-- Coin Main Body -->
+        <path
+            android:fillColor="#F4B733"
+            android:pathData="M51.5,39 a7.5,7.5 0 1,0 0.01,0 Z" />
+        <!-- Coin Inner Circle -->
+        <path
+            android:fillColor="#E49E18"
+            android:pathData="M51.5,40.3 a6.2,6.2 0 1,0 0.01,0 Z" />
+        <!-- Letter 'C' in Coin -->
+        <path
+            android:fillColor="#7A4203"
+            android:pathData="M53.3,44.5 C52.8,44.0 52.1,43.8 51.3,43.8 C49.8,43.8 48.7,45.0 48.7,46.5 C48.7,48.0 49.8,49.2 51.3,49.2 C52.1,49.2 52.8,49.0 53.3,48.5 L53.3,47.3 C52.8,47.7 52.1,48.0 51.4,48.0 C50.5,48.0 49.9,47.3 49.9,46.5 C49.9,45.7 50.5,45.0 51.4,45.0 C52.1,45.0 52.8,45.3 53.3,45.7 Z" />
+    </group>
+
 </vector>
 
