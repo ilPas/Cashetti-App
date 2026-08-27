@@ -98,7 +98,7 @@ fun EssentialScreen(
             ) {
                 Column {
                     Text(
-                        text = "Totale Speso",
+                        text = "Totale Mensile",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
                     )
@@ -125,7 +125,7 @@ fun EssentialScreen(
             shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.surfaceVariant
         ) {
-            val essentialExpenses = state.allExpenses.filter { it.accountType == "ESSENZIALE_REALE" }.sortedByDescending { it.dateMillis }
+            val essentialExpenses = state.essentialExpensesInCycle
             if (essentialExpenses.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -134,7 +134,7 @@ fun EssentialScreen(
                 ) {
                     Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(64.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Nessun costo fisso registrato questo mese.", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                    Text("Nessun costo fisso registrato.", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                 }
             } else {
                 LazyColumn(

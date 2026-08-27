@@ -562,7 +562,7 @@ fun DashboardScreen(
                 }
 
                 // Recent Transactions list
-                val recentTransactions = state.allExpenses.sortedByDescending { it.dateMillis }.take(5)
+                val recentTransactions = state.allExpenses.filter { it.accountType != "ESSENZIALE_REALE" }.sortedByDescending { it.dateMillis }.take(5)
                 if (recentTransactions.isEmpty()) {
                     item {
                         Surface(

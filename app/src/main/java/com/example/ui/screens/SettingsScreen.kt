@@ -78,6 +78,7 @@ fun SettingsScreen(
     var pendingDriveAction by remember { mutableStateOf<String?>(null) }
     var showRestoreDriveConfirmDialog by remember { mutableStateOf(false) }
     var restoreDriveDialogMessage by remember { mutableStateOf<String?>(null) }
+    var driveAuthErrorMessage by remember { mutableStateOf<String?>(null) }
 
     // Google Sign-In Activity Result Launcher
     val googleSignInLauncher = rememberLauncherForActivityResult(
@@ -88,6 +89,7 @@ fun SettingsScreen(
             val account = task.getResult(ApiException::class.java)
             val email = account?.email ?: ""
             if (email.isNotEmpty()) {
+                driveAuthErrorMessage = null
                 onUpdateGoogleAccount(email)
                 if (pendingDriveAction == "BACKUP") {
                     onTriggerGoogleDriveBackup(context)
@@ -95,9 +97,23 @@ fun SettingsScreen(
                     showRestoreDriveConfirmDialog = true
                 }
                 pendingDriveAction = null
+            } else {
+                driveAuthErrorMessage = "Nessun indirizzo email restituito dall'account."
+                pendingDriveAction = null
             }
+        } catch (e: ApiException) {
+            e.printStackTrace()
+            val msg = when (e.statusCode) {
+                10 -> "Errore di configurazione Google Play (Codice 10: DEVELOPER_ERROR). L'app richiede la registrazione del fingerprint SHA-1 su Google Cloud Console. Nel frattempo puoi usare il 'Salva Backup Locale (JSON)' sottostante."
+                12500 -> "Accesso Google non riuscito (Codice 12500). Verifica la connessione o usa 'Salva Backup Locale (JSON)'."
+                7 -> "Errore di connessione di rete con i server Google."
+                else -> "Errore accesso Google (${e.statusCode}: ${e.localizedMessage ?: "Non autorizzato"}). Usa 'Salva Backup Locale (JSON)' per esportare i tuoi dati."
+            }
+            driveAuthErrorMessage = msg
+            pendingDriveAction = null
         } catch (e: Exception) {
             e.printStackTrace()
+            driveAuthErrorMessage = "Errore durante l'accesso: ${e.localizedMessage ?: "Operazione annullata"}"
             pendingDriveAction = null
         }
     }
@@ -668,6 +684,32 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Connetti Account Google per il Backup")
+                            }
+                        }
+
+                        if (driveAuthErrorMessage != null) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = driveAuthErrorMessage ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                             }
                         }
 

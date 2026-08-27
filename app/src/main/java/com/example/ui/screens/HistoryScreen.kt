@@ -107,10 +107,10 @@ fun HistoryScreen(
                 "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
                 "🏠 Ginevra" -> exp.accountType == "SERBATOIO_GINEVRA"
                 "🚫 Spese Eccezionali" -> exp.excludeFromStats
-                else -> true
+                else -> exp.accountType != "ESSENZIALE_REALE"
             }
 
-            matchesCategory && matchesSearch && matchesTime && matchesSpecial
+            matchesCategory && matchesSearch && matchesTime && matchesSpecial && exp.accountType != "ESSENZIALE_REALE"
         }.sortedByDescending { it.dateMillis }
     }
     

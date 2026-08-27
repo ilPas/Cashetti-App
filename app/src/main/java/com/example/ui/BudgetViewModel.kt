@@ -196,9 +196,9 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val avatarUri = settingsList.find { it.key == "avatar_uri" }?.value ?: "" 
         val allowedNotificationApps = settingsList.find { it.key == "allowed_notification_apps" }?.value ?: "PayPal, Google, Apple, Banca, Sella, Intesa, Revolut, N26, Hype, Scalapay"
         
-        // Essential expenses in cycle (only regular stats)
+        // Essential expenses (perennial static memory, not reset by cycle)
         val essentialExpensesInCycle = expensesList.filter { expense ->
-            expense.accountType == "ESSENZIALE_REALE" && expense.dateMillis in cycleStart..cycleEnd
+            expense.accountType == "ESSENZIALE_REALE"
         }
         val essentialTotalSpent = essentialExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
 
