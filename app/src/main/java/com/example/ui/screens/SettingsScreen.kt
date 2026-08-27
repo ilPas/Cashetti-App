@@ -156,7 +156,6 @@ fun SettingsScreen(
     var netMonthlyIncomeText by remember(state.netMonthlyIncome) { mutableStateOf(state.netMonthlyIncome.toString().replace('.', ',')) }
     var essentialBaselineText by remember(state.essentialBaseline) { mutableStateOf(state.essentialBaseline.toString().replace('.', ',')) }
     var monthlyInvestmentTargetText by remember(state.monthlyInvestmentTarget) { mutableStateOf(state.monthlyInvestmentTarget.toString().replace('.', ',')) }
-    var monthlyCapText by remember(state.monthlyCap) { mutableStateOf(state.monthlyCap.toString().replace('.', ',')) }
     var budgetPersonaleText by remember(state.budgetPersonale) { mutableStateOf(state.budgetPersonale.toString().replace('.', ',')) }
     var budgetGinevraText by remember(state.budgetGinevra) { mutableStateOf(state.budgetGinevra.toString().replace('.', ',')) }
     var liquidityText by remember(state.liquidity) { mutableStateOf(state.liquidity.toString().replace('.', ',')) }
@@ -168,10 +167,11 @@ fun SettingsScreen(
 
     val netIncomeNum = netMonthlyIncomeText.replace(',', '.').toDoubleOrNull() ?: state.netMonthlyIncome
     val essentialNum = essentialBaselineText.replace(',', '.').toDoubleOrNull() ?: state.essentialBaseline
-    val capNum = monthlyCapText.replace(',', '.').toDoubleOrNull() ?: state.monthlyCap
     val pacNum = monthlyInvestmentTargetText.replace(',', '.').toDoubleOrNull() ?: state.monthlyInvestmentTarget
+    val bPersNum = budgetPersonaleText.replace(',', '.').toDoubleOrNull() ?: state.budgetPersonale
+    val bGinNum = budgetGinevraText.replace(',', '.').toDoubleOrNull() ?: state.budgetGinevra
     
-    val totalAllocated = essentialNum + capNum + pacNum
+    val totalAllocated = essentialNum + bPersNum + bGinNum + pacNum
     val balance = netIncomeNum - totalAllocated
     
     val balanceColor = if (balance < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
@@ -277,21 +277,6 @@ fun SettingsScreen(
                             value = essentialBaselineText,
                             onValueChange = { essentialBaselineText = it },
                             label = { Text("Spese Essenziali Previste (€)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        )
-                        OutlinedTextField(
-                            value = monthlyCapText,
-                            onValueChange = { monthlyCapText = it },
-                            label = { Text("Budget Spese Discrezionali (€)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -440,12 +425,11 @@ fun SettingsScreen(
                                 val netIncome = netMonthlyIncomeText.replace(',', '.').toDoubleOrNull() ?: state.netMonthlyIncome
                                 val essential = essentialBaselineText.replace(',', '.').toDoubleOrNull() ?: state.essentialBaseline
                                 val targetPAC = monthlyInvestmentTargetText.replace(',', '.').toDoubleOrNull() ?: state.monthlyInvestmentTarget
-                                val cap = monthlyCapText.replace(',', '.').toDoubleOrNull() ?: state.monthlyCap
                                 val bPers = budgetPersonaleText.replace(',', '.').toDoubleOrNull() ?: state.budgetPersonale
                                 val bGin = budgetGinevraText.replace(',', '.').toDoubleOrNull() ?: state.budgetGinevra
                                 val liq = liquidityText.replace(',', '.').toDoubleOrNull() ?: state.liquidity
                                 val inv = investmentsText.replace(',', '.').toDoubleOrNull() ?: state.investments
-                                onUpdateSettings(resetDay, cap, liq, inv, geminiApiText, netIncome, essential, targetPAC, bPers, bGin, allowedNotificationAppsText)
+                                onUpdateSettings(resetDay, bPers, liq, inv, geminiApiText, netIncome, essential, targetPAC, bPers, bGin, allowedNotificationAppsText)
                                 isSettingsSavedMessage = true
                             },
                             modifier = Modifier.fillMaxWidth(),
