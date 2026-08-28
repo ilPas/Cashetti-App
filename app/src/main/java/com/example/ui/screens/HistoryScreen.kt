@@ -17,16 +17,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -40,17 +47,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.ExpenseEntity
 import com.example.ui.BudgetUiState
-import com.example.ui.components.DonutChart
 import com.example.ui.components.TransactionDetailDialog
 import com.example.ui.components.TransactionItemCard
-import com.example.ui.components.AccountBarChart
-import com.example.ui.components.BarChartData
 import com.example.ui.theme.AppColorPalette
 import java.util.Locale
 
@@ -59,17 +64,17 @@ fun HistoryScreen(
     state: BudgetUiState,
     onDeleteExpense: (ExpenseEntity) -> Unit,
     onNavigateToEditExpense: (Long) -> Unit,
+    onNavigateToStatistics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedSpecialFilter by remember { mutableStateOf("Tutte") }
     var selectedCategoryFilter by remember { mutableStateOf("Tutte le Categorie") }
-    var selectedTimeFilter by remember { mutableStateOf("Sempre") }
+    var selectedTimeFilter by remember { mutableStateOf("Questo Ciclo") }
     var searchQuery by remember { mutableStateOf("") }
     var expenseToDelete by remember { mutableStateOf<ExpenseEntity?>(null) }
     var expenseToView by remember { mutableStateOf<ExpenseEntity?>(null) }
-    var showChartDetail by remember { mutableStateOf(false) }
         
-    val timeOptions = listOf("Sempre", "Questo Ciclo", "7 Giorni", "30 Giorni", "1 Anno")
+    val timeOptions = listOf("Questo Ciclo", "Sempre", "7 Giorni", "30 Giorni", "1 Anno")
     val specialFilters = listOf("Tutte", "⚡ Solo Grief Spending", "👤 Personale", "🏠 Ginevra", "🚫 Spese Eccezionali")
     val categoryOptions = remember(state.categories) {
         listOf("Tutte le Categorie") + state.categories.map { it.name }.distinct()
@@ -114,37 +119,9 @@ fun HistoryScreen(
         }.sortedByDescending { it.dateMillis }
     }
     
-    // Macro-feature 1: Exclude "excludeFromStats" from regular chart stats unless explicitly filtered!
-    val statsExpenses = remember(filteredExpenses, selectedSpecialFilter) {
-        if (selectedSpecialFilter == "🚫 Spese Eccezionali") {
-            filteredExpenses
-        } else {
-            filteredExpenses.filter { !it.excludeFromStats }
-        }
+    val totalFilteredSpent = remember(filteredExpenses) {
+        filteredExpenses.sumOf { kotlin.math.abs(it.amount) }
     }
-
-    val expensesByCategory = remember(statsExpenses) {
-        statsExpenses.groupBy { it.category }
-            .mapValues { entry -> entry.value.sumOf { kotlin.math.abs(it.amount) } }
-            .toList()
-            .sortedByDescending { it.second }
-    }
-    
-    val chartData = expensesByCategory.map { it.second.toFloat() }
-    val chartColors = listOf(
-        Color(0xFF8B5CF6), Color(0xFF6366F1), Color(0xFF3B82F6), 
-        Color(0xFF10B981), Color(0xFFF59E0B), Color(0xFFEC4899), Color(0xFF06B6D4), Color(0xFFD946EF)
-    )
-
-    val accountDiscrezionaleTotal = statsExpenses.filter { it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE" }.sumOf { kotlin.math.abs(it.amount) }
-    val accountGinevraTotal = statsExpenses.filter { it.accountType == "SERBATOIO_GINEVRA" }.sumOf { kotlin.math.abs(it.amount) }
-    val accountEventiTotal = statsExpenses.filter { it.accountType == "FONDO_EVENTI_WITHDRAWAL" || it.accountType == "FONDO_EVENTI_DEPOSIT" }.sumOf { kotlin.math.abs(it.amount) }
-    
-    val barChartData = listOf(
-        BarChartData("Discrez.", accountDiscrezionaleTotal.toFloat(), AppColorPalette.Primary),
-        BarChartData("Eventi", accountEventiTotal.toFloat(), AppColorPalette.Secondary),
-        BarChartData("Sicurezza", accountGinevraTotal.toFloat(), AppColorPalette.StatusSaving)
-    )
 
     // Grief spending metrics
     val griefCount = filteredExpenses.count { !it.isNecessary }
@@ -172,34 +149,6 @@ fun HistoryScreen(
         )
     }
 
-    if (showChartDetail) {
-        AlertDialog(
-            onDismissRequest = { showChartDetail = false },
-            title = { Text("Dettaglio Categorie", color = AppColorPalette.TextPrimary) },
-            containerColor = AppColorPalette.Surface,
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val total = expensesByCategory.sumOf { it.second }
-                    items(expensesByCategory.size) { index ->
-                        val item = expensesByCategory[index]
-                        val color = chartColors[index % chartColors.size]
-                        val percentage = if (total > 0) (item.second / total) * 100 else 0.0
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier.size(16.dp).background(color, RoundedCornerShape(4.dp)))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(item.first, modifier = Modifier.weight(1f), color = AppColorPalette.TextPrimary)
-                            Text(String.format(Locale.ITALY, "%.1f%%", percentage), modifier = Modifier.padding(end = 8.dp), style = MaterialTheme.typography.bodySmall, color = AppColorPalette.TextSecondary)
-                            Text(String.format(Locale.ITALY, "€ %.2f", item.second), fontWeight = FontWeight.Bold, color = AppColorPalette.TextPrimary)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showChartDetail = false }) { Text("Chiudi", color = AppColorPalette.Primary) }
-            }
-        )
-    }
-
     expenseToView?.let { expense ->
         TransactionDetailDialog(
             expense = expense,
@@ -217,13 +166,99 @@ fun HistoryScreen(
     ) {
         // Header & Filters
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Text(
-                text = "Storico & Statistiche",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = AppColorPalette.TextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Storico Movimenti",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColorPalette.TextPrimary
+                    )
+                    Text(
+                        text = "${filteredExpenses.size} moviment${if (filteredExpenses.size == 1) "o" else "i"} • ${String.format(Locale.ITALY, "€ %.2f", totalFilteredSpent)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColorPalette.TextSecondary
+                    )
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = AppColorPalette.Primary.copy(alpha = 0.15f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    IconButton(onClick = onNavigateToStatistics) {
+                        Icon(
+                            imageVector = Icons.Outlined.Analytics,
+                            contentDescription = "Apri Statistiche",
+                            tint = AppColorPalette.Primary
+                        )
+                    }
+                }
+            }
             
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Dedicated Banner Link to Statistics Screen
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable { onNavigateToStatistics() },
+                shape = RoundedCornerShape(18.dp),
+                color = AppColorPalette.SurfaceCard
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(AppColorPalette.Primary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Insights,
+                                contentDescription = null,
+                                tint = AppColorPalette.Primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Analisi & Statistiche Avanzate",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColorPalette.TextPrimary
+                            )
+                            Text(
+                                text = "Matrice a pallini, grafici a ciambella e burn-rate",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColorPalette.TextSecondary
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowForward,
+                        contentDescription = "Vai a Statistiche",
+                        tint = AppColorPalette.Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
             // Search Bar
@@ -244,7 +279,7 @@ fun HistoryScreen(
             
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Macro-feature 2: Grief Spending Report Summary Banner if active or present
+            // Grief Spending Report Summary Banner if active or present
             if (griefCount > 0 && selectedSpecialFilter == "⚡ Solo Grief Spending") {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -277,85 +312,6 @@ fun HistoryScreen(
                         }
                     }
                 }
-            }
-
-            // Bar Chart per Conti
-            if (barChartData.any { it.value > 0 }) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = AppColorPalette.SurfaceCard,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-                        Text(
-                            text = "Spese per Conto",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColorPalette.Primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        AccountBarChart(
-                            data = barChartData,
-                            modifier = Modifier.fillMaxWidth().height(140.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Chart Section
-            if (chartData.isNotEmpty()) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = AppColorPalette.SurfaceCard,
-                    modifier = Modifier.fillMaxWidth().clickable { showChartDetail = true }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        DonutChart(
-                            data = chartData,
-                            colors = chartColors,
-                            modifier = Modifier.size(80.dp)
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(
-                                text = "Ripartizione Categorie (Regolari)",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColorPalette.Primary
-                            )
-                            expensesByCategory.take(3).forEachIndexed { index, pair ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .background(chartColors.getOrElse(index) { chartColors.last() }, RoundedCornerShape(2.dp))
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "${pair.first}: ${String.format(Locale.ITALY, "%.2f €", pair.second)}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = AppColorPalette.TextPrimary
-                                    )
-                                }
-                            }
-                            if (expensesByCategory.size > 3) {
-                                Text(
-                                    text = "Tocca per vedere tutte le categorie...",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = AppColorPalette.TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
             }
             
             // Special Filters (Macro-features)
@@ -410,7 +366,7 @@ fun HistoryScreen(
             }
         }
 
-        // List
+        // Transactions List
         Surface(
             modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),

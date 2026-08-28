@@ -36,7 +36,11 @@ L'applicazione si basa su pilastri contabili distinti per evitare l'attrito cogn
 * **💾 Backup & Ripristino Dati**:
   * **Backup Locale JSON (Offline/Sicuro)**: Esportazione e importazione istantanea con un click dell'intero database in formato `.json`.
   * **Google Drive Sync**: Integrazione cloud per salvataggio automatico e ripristino multi-dispositivo.
-* **📊 Report & Statistiche Avanzate**: Filtri temporali dinamici, ripartizione per categoria, analisi del trend e riepilogo a fine ciclo.
+* **📊 Report & Statistiche Avanzate (`StatisticsScreen`)**:
+  * **Matrice a Pallini Giornaliera (Tendency Dot Matrix)**: Rappresentazione visiva day-by-day della spesa nel ciclo con altezza proporzionale, colorazione in base alla categoria prevalente e ispezione interattiva del singolo giorno.
+  * **Grafico a Ciambella a Pillole Arrotondate (Spending Donut)**: Ripartizione visiva moderna delle categorie con totale centrale e percentuali.
+  * **Curva di Burn-Rate & Andamento Cumulativo (Line Chart)**: Tracciamento dell'andamento reale rispetto alla retta ideale di consumo del budget.
+  * **Metriche & KPI Intelligenti**: Giorno più costoso (*Peak Day*), media giornaliera effettiva, contatore giorni *No-Spend*, proiezione di chiusura ciclo (*Surplus/Deficit*) e rapporto qualità della spesa (*Grief/Impulso vs Necessità*).
 * **📱 Widget Schermata Home**: Widget nativo per visualizzare a colpo d'occhio il budget spendibile residuo senza aprire l'applicazione.
 
 ---
@@ -79,7 +83,8 @@ app/src/main/java/com/example/
 │   │   ├── AddExpenseScreen.kt          # Form inserimento manuale spesa/movimento
 │   │   ├── EssentialScreen.kt           # Gestione costi fissi strutturali
 │   │   ├── SubscriptionsScreen.kt       # Gestione abbonamenti mensili
-│   │   ├── HistoryScreen.kt             # Storico transazioni con filtri avanzati
+│   │   ├── HistoryScreen.kt             # Storico transazioni e accesso rapido statistiche
+│   │   ├── StatisticsScreen.kt          # Sezione dedicata statistiche avanzate (Matrice, Donut, Burn-rate)
 │   │   ├── EventFundScreen.kt           # Gestione Fondo Risparmi ed Eventi
 │   │   ├── PlanningScreen.kt            # Pianificazione budget ed estimatori
 │   │   ├── SettingsScreen.kt            # Impostazioni generali, backup e parametri

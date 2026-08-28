@@ -108,6 +108,10 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
     val pendingTransaction: StateFlow<DetectedTransaction?> = PaymentNotificationManager.pendingTransaction
     val notificationLogs = repository.allNotificationLogs
 
+    fun refreshTime() {
+        referenceTimeState.value = System.currentTimeMillis()
+    }
+
     fun clearNotificationLogs() {
         viewModelScope.launch {
             repository.clearNotificationLogs()
@@ -171,7 +175,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val budgetPersonale = settingsList.find { it.key == "budget_personale" }?.value?.toDoubleOrNull()
             ?: settingsList.find { it.key == "monthly_cap" }?.value?.toDoubleOrNull()
             ?: 700.0
-        val budgetGinevra = settingsList.find { it.key == "budget_ginevra" }?.value?.toDoubleOrNull() ?: 180.0
+        val budgetGinevra = settingsList.find { it.key == "budget_ginevra" }?.value?.toDoubleOrNull() ?: settingsList.find { it.key == "ginevra_monthly_cap" }?.value?.toDoubleOrNull() ?: 180.0
         val monthlyCapSetting = budgetPersonale
         val liquiditySetting = settingsList.find { it.key == "liquidity" }?.value?.toDoubleOrNull() ?: 0.0
         val investmentsSetting = settingsList.find { it.key == "investments" }?.value?.toDoubleOrNull() ?: 0.0

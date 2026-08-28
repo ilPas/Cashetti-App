@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class BudgetWidgetProvider : AppWidgetProvider() {
+class BudgetVerticalWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (appWidgetId in appWidgetIds) {
@@ -33,7 +33,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
         }
 
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-            val views = RemoteViews(context.packageName, R.layout.widget_budget)
+            val views = RemoteViews(context.packageName, R.layout.widget_budget_vertical)
             
             // Intent to launch app when clicked
             val intent = Intent(context, MainActivity::class.java)
@@ -45,7 +45,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                 try {
                     val db = AppDatabase.getDatabase(context)
                     val repo = BudgetRepository(db.budgetDao())
-                        
+                    
                     val settings = repo.allSettings.first()
                     val resetDay = settings.find { it.key == "reset_day" }?.value?.toIntOrNull() ?: 27
                     val budgetPersonale = settings.find { it.key == "budget_personale" }?.value?.toDoubleOrNull() ?: settings.find { it.key == "monthly_cap" }?.value?.toDoubleOrNull() ?: 700.0
@@ -65,6 +65,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                     
                     val subs = repo.allSubscriptions.first()
                     val recurringTotal = subs.filter { it.isActive }.sumOf { it.amount }
+
                     val personaleRemaining = budgetPersonale - recurringTotal - personaleSpent
 
                     // Calcolo Rollover
@@ -88,10 +89,12 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                     }
                     val ginevraRollover = initialGinevraRollover + historicalRollover
                     val ginevraTotalAvailable = budgetGinevra + ginevraRollover
+
                     val ginevraExpensesInCycle = expenses.filter { 
                         it.accountType == "SERBATOIO_GINEVRA" && it.dateMillis in cycleStart..cycleEnd 
                     }
                     val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    
                     val ginevraRemaining = ginevraTotalAvailable - ginevraSpent
 
                     val totalMonthlySpendable = personaleRemaining + ginevraRemaining
@@ -106,12 +109,15 @@ class BudgetWidgetProvider : AppWidgetProvider() {
                     val startOfToday = calendar.timeInMillis
 
                     val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
+                    
                     val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
                     val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
 
                     val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
                     val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
+                    
                     val startOfDayDailyBudget = if (daysRemaining > 0) remainingBeforeToday / daysRemaining else remainingBeforeToday
+                    
                     val dailyBudget = startOfDayDailyBudget - spentToday
                     
                     // Progress bar calculation
@@ -143,7 +149,7 @@ class BudgetWidgetProvider : AppWidgetProvider() {
         
         fun updateAllWidgets(context: Context) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, BudgetWidgetProvider::class.java)
+            val componentName = ComponentName(context, BudgetVerticalWidgetProvider::class.java)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
             for (appWidgetId in appWidgetIds) {
                 updateAppWidget(context, appWidgetManager, appWidgetId)

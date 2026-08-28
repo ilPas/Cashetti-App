@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -74,6 +75,7 @@ import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.EventFundScreen
 import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.StatisticsScreen
 import com.example.ui.screens.SubscriptionsScreen
 import com.example.ui.theme.BudgetControlTheme
 
@@ -85,6 +87,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Subscriptions : Screen("subscriptions", "Ricorrenti", Icons.Outlined.Autorenew)
     object EventFund : Screen("event_fund", "Risparmi", Icons.Outlined.Celebration)
     object History : Screen("history", "Storico", Icons.Outlined.History)
+    object Statistics : Screen("statistics", "Statistiche", Icons.Outlined.Analytics)
     object Settings : Screen("settings", "Impostazioni", Icons.Outlined.Settings)
     object NotificationLogs : Screen("notification_logs", "Log Notifiche", Icons.Outlined.List)
 }
@@ -119,6 +122,12 @@ fun BudgetControlApp() {
     val pendingTransaction by viewModel.pendingTransaction.collectAsStateWithLifecycle()
     val navController = rememberNavController()
 
+    com.example.ui.OnLifecycleEvent { _, event ->
+        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            viewModel.refreshTime()
+        }
+    }
+
     // Weekly Google Drive Auto-Backup check on app launch
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.checkAndPerformWeeklyAutoBackup(context)
@@ -127,12 +136,13 @@ fun BudgetControlApp() {
     // Threshold Alert Logic
     val previousRemaining = remember { androidx.compose.runtime.mutableStateOf<Double?>(null) }
     
-    androidx.compose.runtime.LaunchedEffect(uiState.discretionaryVariableRemaining, uiState.variableBudgetAvailable) {
+    androidx.compose.runtime.LaunchedEffect(uiState.totalMonthlySpendable, uiState.dailyBudget) {
         val currentRemaining = uiState.discretionaryVariableRemaining
         val totalAvailable = uiState.variableBudgetAvailable
         val prev = previousRemaining.value
         
         com.example.ui.widget.BudgetWidgetProvider.updateAllWidgets(context)
+        com.example.ui.widget.BudgetVerticalWidgetProvider.updateAllWidgets(context)
         
         if (prev != null && totalAvailable > 0) {
             val threshold20 = totalAvailable * 0.20
@@ -394,7 +404,42 @@ fun BudgetControlApp() {
                     onDeleteExpense = { exp ->
                         viewModel.deleteExpense(exp)
                     },
-                    onNavigateToEditExpense = { expenseId -> navController.navigate("${Screen.AddExpense.route}?editId=$expenseId") }
+                    onNavigateToEditExpense = { expenseId -> navController.navigate("${Screen.AddExpense.route}?editId=$expenseId") },
+                    onNavigateToStatistics = { navController.navigate(Screen.Statistics.route) }
+                )
+            }
+
+            composable(
+                route = Screen.Statistics.route,
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(defaultDuration, easing = emphasizedEasing)
+                    ) + fadeIn(animationSpec = tween(defaultDuration, easing = emphasizedEasing))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(defaultDuration, easing = emphasizedEasing)
+                    ) + fadeOut(animationSpec = tween(defaultDuration, easing = emphasizedEasing))
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(defaultDuration, easing = emphasizedEasing)
+                    ) + fadeIn(animationSpec = tween(defaultDuration, easing = emphasizedEasing))
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(defaultDuration, easing = emphasizedEasing)
+                    ) + fadeOut(animationSpec = tween(defaultDuration, easing = emphasizedEasing))
+                }
+            ) {
+                StatisticsScreen(
+                    state = uiState,
+                    onNavigateUp = { navController.navigateUp() },
+                    onNavigateToHistory = { navController.navigate(Screen.History.route) }
                 )
             }
 

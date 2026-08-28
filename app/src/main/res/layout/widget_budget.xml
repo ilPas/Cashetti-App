@@ -5,77 +5,74 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
     android:orientation="vertical"
-    android:padding="10dp"
-    android:gravity="center_vertical">
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="8dp"
+    android:gravity="center">
 
-    <LinearLayout
+    <!-- TESTO MENSILE: Ripristinate le dimensioni grandi -->
+    <TextView
+        android:id="@+id/widget_remaining_text"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="bottom">
-        
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="MENSILE RIMANENTE"
-                android:textColor="#CAC4D0"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:maxLines="1" />
-                
-            <TextView
-                android:id="@+id/widget_remaining_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:text="€..."
-                android:textColor="#EADDFF"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="OGGI"
-                android:textColor="#CAC4D0"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:maxLines="1" />
-                
-            <TextView
-                android:id="@+id/widget_daily_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:text="€..."
-                android:textColor="#D0BCFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-        </LinearLayout>
-    </LinearLayout>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="€..."
+        android:textColor="#F2F2F2"
+        android:textStyle="bold"
+        android:gravity="center_horizontal|bottom"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:maxLines="1"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="20sp"
+        android:autoSizeMaxTextSize="32sp"
+        android:autoSizeStepGranularity="1sp" />
 
     <ProgressBar
         android:id="@+id/widget_progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="5dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="6dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
         android:max="100"
         android:progress="0"
         android:progressDrawable="@drawable/widget_progress_drawable" />
+
+    <!-- LAYOUT INFERIORE: Rimpicciolito per non rubare spazio in altezza -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|center_horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BUDGET\nGIORNALIERO"
+            android:textColor="#C4C7C5"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:gravity="start|center_vertical"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/widget_daily_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="€..."
+            android:textColor="#A8C7FA"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="12sp"
+            android:autoSizeMaxTextSize="18sp"
+            android:autoSizeStepGranularity="1sp" />
+    </LinearLayout>
+
 </LinearLayout>

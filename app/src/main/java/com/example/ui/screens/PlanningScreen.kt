@@ -59,7 +59,8 @@ fun PlanningScreen(
             2 -> HistoryScreen(
                 state = state,
                 onDeleteExpense = { exp -> viewModel.deleteExpense(exp) },
-                onNavigateToEditExpense = { expenseId -> navController.navigate("add_expense?editId=$expenseId") }
+                onNavigateToEditExpense = { expenseId -> navController.navigate("add_expense?editId=$expenseId") },
+                onNavigateToStatistics = { navController.navigate("statistics") }
             )
         }
     }
