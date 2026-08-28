@@ -28,13 +28,7 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.QuickRegisterActivity"
-            android:exported="true"
-            android:label="Registrazione Rapida Spesa"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:theme="@style/Theme.Transparent" />
+
 
         <service
             android:name=".service.PaymentNotificationListenerService"

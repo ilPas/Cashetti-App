@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,19 +48,29 @@ fun AddExpenseScreen(
     state: BudgetUiState,
     initialAccountType: String?,
     expenseToEditId: Long? = null,
+    pendingTransaction: com.example.service.DetectedTransaction? = null,
+    onClearPendingTransaction: () -> Unit = {},
     onSaveExpense: (String, Double, String, Long, String, String, Double?, Double?, Long?, Long?, Boolean, Boolean, Int) -> Unit,
     onUpdateExpense: ((Long, String, Double, String, Long, String, String, Double?, Double?, Boolean, Boolean) -> Unit)? = null,
     onSavedSuccess: () -> Unit
 ) {
+    DisposableEffect(Unit) {
+        onDispose {
+            onClearPendingTransaction()
+        }
+    }
     val expenseToEdit = remember(expenseToEditId, state.allExpenses) {
         if (expenseToEditId != null) state.allExpenses.find { it.id == expenseToEditId } else null
     }
 
-    var amountText by remember(expenseToEdit) {
-        mutableStateOf(if (expenseToEdit != null) kotlin.math.abs(expenseToEdit.amount).toString() else "")
+    var amountText by remember(expenseToEdit, pendingTransaction) {
+        mutableStateOf(
+            if (expenseToEdit != null) kotlin.math.abs(expenseToEdit.amount).toString()
+            else pendingTransaction?.estimatedEurAmount?.let { String.format(Locale.US, "%.2f", it) } ?: ""
+        )
     }
-    var noteText by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.note ?: "") }
-    var merchantText by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.merchant ?: "") }
+    var noteText by remember(expenseToEdit, pendingTransaction) { mutableStateOf(expenseToEdit?.note ?: pendingTransaction?.rawTitle ?: "") }
+    var merchantText by remember(expenseToEdit, pendingTransaction) { mutableStateOf(expenseToEdit?.merchant ?: pendingTransaction?.merchant ?: "") }
     var locationLat by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.latitude) }
     var locationLng by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.longitude) }
     var selectedCategory by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.category ?: "Altro") }
@@ -122,19 +134,20 @@ fun AddExpenseScreen(
             )
         }
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            color = AppColorPalette.Surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+        Box(modifier = Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = AppColorPalette.Surface
             ) {
-                // Macro-feature 4: Cassetto / Conto Selection
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Macro-feature 4: Cassetto / Conto Selection
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Scegli Cassetto o Conto:",
@@ -620,76 +633,90 @@ fun AddExpenseScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
-                        val parsedAmount = amountText.replace(',', '.').toDoubleOrNull()
-                        if (parsedAmount == null || parsedAmount <= 0) {
-                            return@Button
-                        }
-                        if (isNecessarySelection == null) {
-                            showNecessityError = true
-                            return@Button
-                        }
-
-                        val isNecessary = isNecessarySelection ?: true
-                        val finalAmount = if (selectedAccountType == "FONDO_EVENTI_WITHDRAWAL") -parsedAmount else parsedAmount
-                        
-                        if (expenseToEditId != null && onUpdateExpense != null) {
-                            onUpdateExpense(
-                                expenseToEditId,
-                                selectedAccountType,
-                                finalAmount,
-                                selectedCategory,
-                                dateMillis,
-                                noteText,
-                                merchantText,
-                                locationLat,
-                                locationLng,
-                                excludeFromStats,
-                                isNecessary
-                            )
-                        } else {
-                            val finalAmortization = if (isAmortizationEnabled) amortizationMonths else 1
-                            onSaveExpense(
-                                selectedAccountType,
-                                finalAmount,
-                                selectedCategory,
-                                dateMillis,
-                                noteText,
-                                merchantText,
-                                locationLat,
-                                locationLng,
-                                null, // targetDateMillis
-                                null,  // eventId
-                                excludeFromStats,
-                                isNecessary,
-                                finalAmortization
-                            )
-                        }
-                        onSavedSuccess()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .testTag("save_expense_button"),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColorPalette.Primary,
-                        contentColor = AppColorPalette.TextPrimary
-                    )
-                ) {
-                    Text(
-                        text = "SALVA MOVIMENTO",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = AppColorPalette.TextPrimary
-                    )
-                }
-                Spacer(modifier = Modifier.height(48.dp))
             }
         }
-    }
+
+        val buttonColor by animateColorAsState(
+            targetValue = if (isNecessarySelection != null) Color(0xFF4C1D95) else AppColorPalette.SurfaceCardDark,
+            animationSpec = tween(durationMillis = 300),
+            label = "buttonColor"
+        )
+        val textColor by animateColorAsState(
+            targetValue = if (isNecessarySelection != null) AppColorPalette.TextPrimary else AppColorPalette.TextMuted,
+            animationSpec = tween(durationMillis = 300),
+            label = "textColor"
+        )
+
+        Button(
+            onClick = {
+                val parsedAmount = amountText.replace(',', '.').toDoubleOrNull()
+                if (parsedAmount == null || parsedAmount <= 0) {
+                    return@Button
+                }
+                if (isNecessarySelection == null) {
+                    showNecessityError = true
+                    return@Button
+                }
+
+                val isNecessary = isNecessarySelection ?: true
+                val finalAmount = if (selectedAccountType == "FONDO_EVENTI_WITHDRAWAL") -parsedAmount else parsedAmount
+                
+                if (expenseToEditId != null && onUpdateExpense != null) {
+                    onUpdateExpense(
+                        expenseToEditId,
+                        selectedAccountType,
+                        finalAmount,
+                        selectedCategory,
+                        dateMillis,
+                        noteText,
+                        merchantText,
+                        locationLat,
+                        locationLng,
+                        excludeFromStats,
+                        isNecessary
+                    )
+                } else {
+                    val finalAmortization = if (isAmortizationEnabled) amortizationMonths else 1
+                    onSaveExpense(
+                        selectedAccountType,
+                        finalAmount,
+                        selectedCategory,
+                        dateMillis,
+                        noteText,
+                        merchantText,
+                        locationLat,
+                        locationLng,
+                        null, // targetDateMillis
+                        null,  // eventId
+                        excludeFromStats,
+                        isNecessary,
+                        finalAmortization
+                    )
+                }
+                onSavedSuccess()
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 124.dp)
+                .height(56.dp)
+                .testTag("save_expense_button"),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = buttonColor,
+                contentColor = textColor
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+        ) {
+            Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "SALVA MOVIMENTO",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    } // closes Box
+} // closes Main Column
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = dateMillis)

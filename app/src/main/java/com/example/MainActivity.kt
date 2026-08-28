@@ -69,7 +69,7 @@ import com.example.data.AppDatabase
 import com.example.data.BudgetRepository
 import com.example.ui.BudgetViewModel
 import com.example.ui.BudgetViewModelFactory
-import com.example.ui.components.DetectedTransactionDialog
+import androidx.compose.runtime.LaunchedEffect
 import com.example.ui.screens.AddExpenseScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.EventFundScreen
@@ -168,23 +168,13 @@ fun BudgetControlApp() {
         previousRemaining.value = currentRemaining
     }
 
-    // Show Detected Notification Dialog if any transaction was intercepted
-    pendingTransaction?.let { tx ->
-        DetectedTransactionDialog(
-            transaction = tx,
-            categories = uiState.categories,
-            onDismiss = { viewModel.clearPendingTransaction() },
-            onConfirmExpense = { accountType, amountEur, category, note, merchant, amortizationMonths ->
-                viewModel.addAmortizedExpense(
-                    accountType = accountType,
-                    totalAmountEur = amountEur,
-                    category = category,
-                    note = note,
-                    merchant = merchant,
-                    amortizationMonths = amortizationMonths
-                )
+    LaunchedEffect(pendingTransaction) {
+        if (pendingTransaction != null) {
+            val destination = "${Screen.AddExpense.route}?accountType=DISCREZIONALE_VARIABILE"
+            navController.navigate(destination) {
+                launchSingleTop = true
             }
-        )
+        }
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -290,6 +280,8 @@ fun BudgetControlApp() {
                     state = uiState,
                     initialAccountType = accountType,
                     expenseToEditId = editId,
+                    pendingTransaction = pendingTransaction,
+                    onClearPendingTransaction = { viewModel.clearPendingTransaction() },
                     onSaveExpense = { accType, amount, category, dateMillis, note, merchant, lat, lng, targetDateMillis, eventId, excludeFromStats, isNecessary, amortizationMonths ->
                         if (amortizationMonths > 1) {
                             viewModel.addAmortizedExpense(

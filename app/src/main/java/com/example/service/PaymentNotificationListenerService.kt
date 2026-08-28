@@ -11,7 +11,6 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
-import com.example.ui.QuickRegisterActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -203,7 +202,7 @@ class PaymentNotificationListenerService : NotificationListenerService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val intent = Intent(this, QuickRegisterActivity::class.java).apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
