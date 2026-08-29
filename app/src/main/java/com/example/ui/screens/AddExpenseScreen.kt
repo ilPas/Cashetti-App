@@ -50,8 +50,8 @@ fun AddExpenseScreen(
     expenseToEditId: Long? = null,
     pendingTransaction: com.example.service.DetectedTransaction? = null,
     onClearPendingTransaction: () -> Unit = {},
-    onSaveExpense: (String, Double, String, Long, String, String, Double?, Double?, Long?, Long?, Boolean, Boolean, Int) -> Unit,
-    onUpdateExpense: ((Long, String, Double, String, Long, String, String, Double?, Double?, Boolean, Boolean) -> Unit)? = null,
+    onSaveExpense: (String, Double, String, Long, String, String, Double?, Double?, Long?, Long?, Boolean, Boolean, Int, Boolean, Double, String) -> Unit,
+    onUpdateExpense: ((Long, String, Double, String, Long, String, String, Double?, Double?, Boolean, Boolean, Boolean, Double, String) -> Unit)? = null,
     onSavedSuccess: () -> Unit
 ) {
     DisposableEffect(Unit) {
@@ -95,7 +95,11 @@ fun AddExpenseScreen(
         mutableStateOf<Boolean?>(expenseToEdit?.isNecessary)
     }
     var showNecessityError by remember { mutableStateOf(false) }
+    var showNoteError by remember { mutableStateOf(false) }
     
+    var isRefundExpected by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.isRefundExpected ?: false) }
+    var expectedRefundAmountStr by remember(expenseToEdit) { mutableStateOf(if (expenseToEdit?.expectedRefundAmount ?: 0.0 > 0) expenseToEdit!!.expectedRefundAmount.toString() else "") }
+    var refundNote by remember(expenseToEdit) { mutableStateOf(expenseToEdit?.refundNote ?: "") }
     var dateMillis by remember(expenseToEdit) { mutableLongStateOf(expenseToEdit?.dateMillis ?: System.currentTimeMillis()) }
     var showDatePicker by remember { mutableStateOf(false) }
     
@@ -107,8 +111,8 @@ fun AddExpenseScreen(
 
     val accounts = listOf(
         "SERBATOIO_PERSONALE" to "👤 Cassetto Personale",
-        "SERBATOIO_GINEVRA" to "🏠 Casa / Ginevra (Imprevisti)",
-        "ESSENZIALE_REALE" to "🏢 Costi Fissi Essenziali",
+        "SERBATOIO_GINEVRA" to "🏠 Cassetto Familiare",
+        "ESSENZIALE_REALE" to "🏢 Costi Fissi",
         "FONDO_EVENTI_DEPOSIT" to "🎁 Fondo Risparmi (+)",
         "FONDO_EVENTI_WITHDRAWAL" to "🎁 Fondo Risparmi (-)"
     )
@@ -186,6 +190,20 @@ fun AddExpenseScreen(
                                 )
                             }
                         }
+                    }
+                    
+                    androidx.compose.animation.AnimatedVisibility(visible = selectedAccountType == "ESSENZIALE_REALE" || selectedAccountType == "SERBATOIO_GINEVRA") {
+                        val helperText = if (selectedAccountType == "ESSENZIALE_REALE") {
+                            "Spese fisse e prevedibili, stesso importo ogni mese (mutuo, utenze, abbonamenti)"
+                        } else {
+                            "Spese necessarie per la famiglia/casa ma irregolari — manutenzioni, riparazioni, imprevisti"
+                        }
+                        Text(
+                            text = helperText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColorPalette.TextMuted,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
                     }
                 }
 
@@ -363,36 +381,130 @@ fun AddExpenseScreen(
                     color = AppColorPalette.SurfaceCard,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text(
-                                text = "Escludi dalle statistiche",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AppColorPalette.TextPrimary
-                            )
-                            Text(
-                                text = "Per spese eccezionali / pregresse (es. tasse annuali, debiti vecchi). Viene ignorata nei grafici a torta e dal budget mensile regolare.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AppColorPalette.TextSecondary
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = "Escludi dalle statistiche",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColorPalette.TextPrimary
+                                )
+                                Text(
+                                    text = "Per spese eccezionali / pregresse (es. tasse annuali, debiti vecchi). Viene ignorata nei grafici a torta e dal budget mensile regolare.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColorPalette.TextSecondary
+                                )
+                            }
+                            Switch(
+                                checked = excludeFromStats,
+                                onCheckedChange = { excludeFromStats = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = AppColorPalette.TextPrimary,
+                                    checkedTrackColor = AppColorPalette.StatusFixedCost,
+                                    uncheckedThumbColor = AppColorPalette.TextMuted,
+                                    uncheckedTrackColor = AppColorPalette.SurfaceCardDark
+                                )
                             )
                         }
-                        Switch(
-                            checked = excludeFromStats,
-                            onCheckedChange = { excludeFromStats = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AppColorPalette.TextPrimary,
-                                checkedTrackColor = AppColorPalette.StatusFixedCost,
-                                uncheckedThumbColor = AppColorPalette.TextMuted,
-                                uncheckedTrackColor = AppColorPalette.SurfaceCardDark
+                        
+                        androidx.compose.animation.AnimatedVisibility(visible = excludeFromStats) {
+                            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                                Text(
+                                    text = "Motivo esclusione (obbligatorio)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (showNoteError) AppColorPalette.StatusExpense else AppColorPalette.TextSecondary,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                if (showNoteError) {
+                                    Text(
+                                        text = "Inserisci un motivo nelle note per questa spesa eccezionale",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = AppColorPalette.StatusExpense,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Rimborso Atteso
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = AppColorPalette.SurfaceCard,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = "Rimborso atteso",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AppColorPalette.TextPrimary
+                                )
+                                Text(
+                                    text = "Attiva se questa spesa sarà parzialmente o totalmente rimborsata (es. spese aziendali, acquisti condivisi).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppColorPalette.TextSecondary
+                                )
+                            }
+                            Switch(
+                                checked = isRefundExpected,
+                                onCheckedChange = { isRefundExpected = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = AppColorPalette.TextPrimary,
+                                    checkedTrackColor = AppColorPalette.Primary,
+                                    uncheckedThumbColor = AppColorPalette.TextMuted,
+                                    uncheckedTrackColor = AppColorPalette.SurfaceCardDark
+                                )
                             )
-                        )
+                        }
+                        
+                        androidx.compose.animation.AnimatedVisibility(visible = isRefundExpected) {
+                            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                                OutlinedTextField(
+                                    value = expectedRefundAmountStr,
+                                    onValueChange = { 
+                                        expectedRefundAmountStr = it
+                                    },
+                                    label = { Text("Importo atteso in rimborso", color = AppColorPalette.TextSecondary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = AppColorPalette.TextPrimary),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = AppColorPalette.Primary,
+                                        unfocusedBorderColor = AppColorPalette.SurfaceCardDark,
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = refundNote,
+                                    onValueChange = { refundNote = it },
+                                    label = { Text("Nota rimborso (opzionale)", color = AppColorPalette.TextSecondary) },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = AppColorPalette.TextPrimary),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = AppColorPalette.Primary,
+                                        unfocusedBorderColor = AppColorPalette.SurfaceCardDark,
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -636,13 +748,15 @@ fun AddExpenseScreen(
             }
         }
 
+        val isButtonEnabled = isNecessarySelection != null && (!excludeFromStats || noteText.isNotBlank())
+
         val buttonColor by animateColorAsState(
-            targetValue = if (isNecessarySelection != null) Color(0xFF4C1D95) else AppColorPalette.SurfaceCardDark,
+            targetValue = if (isButtonEnabled) Color(0xFF4C1D95) else AppColorPalette.SurfaceCardDark,
             animationSpec = tween(durationMillis = 300),
             label = "buttonColor"
         )
         val textColor by animateColorAsState(
-            targetValue = if (isNecessarySelection != null) AppColorPalette.TextPrimary else AppColorPalette.TextMuted,
+            targetValue = if (isButtonEnabled) AppColorPalette.TextPrimary else AppColorPalette.TextMuted,
             animationSpec = tween(durationMillis = 300),
             label = "textColor"
         )
@@ -657,9 +771,14 @@ fun AddExpenseScreen(
                     showNecessityError = true
                     return@Button
                 }
+                if (excludeFromStats && noteText.isBlank()) {
+                    showNoteError = true
+                    return@Button
+                }
 
                 val isNecessary = isNecessarySelection ?: true
                 val finalAmount = if (selectedAccountType == "FONDO_EVENTI_WITHDRAWAL") -parsedAmount else parsedAmount
+                val finalExpectedRefundAmount = if (isRefundExpected) expectedRefundAmountStr.replace(',', '.').toDoubleOrNull() ?: 0.0 else 0.0
                 
                 if (expenseToEditId != null && onUpdateExpense != null) {
                     onUpdateExpense(
@@ -673,7 +792,10 @@ fun AddExpenseScreen(
                         locationLat,
                         locationLng,
                         excludeFromStats,
-                        isNecessary
+                        isNecessary,
+                        isRefundExpected,
+                        finalExpectedRefundAmount,
+                        refundNote
                     )
                 } else {
                     val finalAmortization = if (isAmortizationEnabled) amortizationMonths else 1
@@ -690,7 +812,10 @@ fun AddExpenseScreen(
                         null,  // eventId
                         excludeFromStats,
                         isNecessary,
-                        finalAmortization
+                        finalAmortization,
+                        isRefundExpected,
+                        finalExpectedRefundAmount,
+                        refundNote
                     )
                 }
                 onSavedSuccess()

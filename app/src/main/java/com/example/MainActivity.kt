@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.MoneyOff
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.PieChart
@@ -71,6 +72,7 @@ import com.example.ui.BudgetViewModel
 import com.example.ui.BudgetViewModelFactory
 import androidx.compose.runtime.LaunchedEffect
 import com.example.ui.screens.AddExpenseScreen
+import com.example.ui.screens.AddIncomeScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.EventFundScreen
 import com.example.ui.screens.HistoryScreen
@@ -81,7 +83,8 @@ import com.example.ui.theme.BudgetControlTheme
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Dashboard : Screen("dashboard", "Home", Icons.Outlined.Dashboard)
-    object AddExpense : Screen("add_expense", "Aggiungi", Icons.Outlined.AddCircle)
+    object AddExpense : Screen("add_expense", "Aggiungi Spesa", Icons.Outlined.AddCircle)
+    object AddIncome : Screen("add_income", "Aggiungi Entrata", Icons.Outlined.AddCircle)
     object Planning : Screen("planning", "Pianifica", Icons.Outlined.PieChart)
     object Essential : Screen("essential", "Costi fissi", Icons.Outlined.AccountBalanceWallet)
     object Subscriptions : Screen("subscriptions", "Ricorrenti", Icons.Outlined.Autorenew)
@@ -90,6 +93,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Statistics : Screen("statistics", "Statistiche", Icons.Outlined.Analytics)
     object Settings : Screen("settings", "Impostazioni", Icons.Outlined.Settings)
     object NotificationLogs : Screen("notification_logs", "Log Notifiche", Icons.Outlined.List)
+    object Refunds : Screen("refunds", "Rimborsi", Icons.Outlined.MoneyOff)
 }
 
 class MainActivity : FragmentActivity() {
@@ -116,7 +120,7 @@ fun BudgetControlApp() {
     val context = LocalContext.current
     val database = remember(context) { AppDatabase.getDatabase(context) }
     val repository = remember(database) { BudgetRepository(database.budgetDao()) }
-    val viewModel: BudgetViewModel = viewModel(factory = BudgetViewModelFactory(repository))
+    val viewModel: BudgetViewModel = viewModel(factory = BudgetViewModelFactory(repository, context.applicationContext as android.app.Application))
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pendingTransaction by viewModel.pendingTransaction.collectAsStateWithLifecycle()
@@ -230,14 +234,49 @@ fun BudgetControlApp() {
                 com.example.ui.screens.DashboardScreen(
                     state = uiState,
                     onNavigateToAddExpense = { navController.navigate(Screen.AddExpense.route) },
+                    onNavigateToAddIncome = { navController.navigate(Screen.AddIncome.route) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onNavigateToEventFund = { navController.navigate(Screen.EventFund.route) },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                    onNavigateToRefunds = { navController.navigate(Screen.Refunds.route) },
                     onUpdateAvatar = { uri -> viewModel.updateAvatarUri(uri) },
                     onDismissMonthlySummary = { cycleStart -> viewModel.dismissMonthlySummary(cycleStart) },
                     onNavigateToEditExpense = { expenseId -> navController.navigate("${Screen.AddExpense.route}?editId=$expenseId") },
                     onDeleteExpense = { exp -> viewModel.deleteExpense(exp) },
                     onToggleInvestment = { cycleId, isDone -> viewModel.toggleInvestmentDone(cycleId, isDone) }
+                )
+            }
+
+            composable(
+                route = Screen.AddIncome.route,
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Up,
+                        animationSpec = tween(bottomSheetDuration, easing = emphasizedEasing)
+                    ) + fadeIn(animationSpec = tween(bottomSheetDuration, easing = emphasizedEasing))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(bottomSheetDuration, easing = emphasizedEasing)
+                    ) + fadeOut(animationSpec = tween(bottomSheetDuration, easing = emphasizedEasing))
+                }
+            ) {
+                AddIncomeScreen(
+                    state = uiState,
+                    onSaveIncome = { accountType, amount, note, merchant ->
+                        viewModel.addExpense(
+                            accountType = accountType,
+                            amount = amount,
+                            category = "ENTRATA",
+                            note = note,
+                            merchant = merchant,
+                            isIncome = true
+                        )
+                    },
+                    onSavedSuccess = {
+                        navController.popBackStack()
+                    }
                 )
             }
 
@@ -282,7 +321,7 @@ fun BudgetControlApp() {
                     expenseToEditId = editId,
                     pendingTransaction = pendingTransaction,
                     onClearPendingTransaction = { viewModel.clearPendingTransaction() },
-                    onSaveExpense = { accType, amount, category, dateMillis, note, merchant, lat, lng, targetDateMillis, eventId, excludeFromStats, isNecessary, amortizationMonths ->
+                    onSaveExpense = { accType, amount, category, dateMillis, note, merchant, lat, lng, targetDateMillis, eventId, excludeFromStats, isNecessary, amortizationMonths, isRefundExpected, expectedRefundAmount, refundNote ->
                         if (amortizationMonths > 1) {
                             viewModel.addAmortizedExpense(
                                 accountType = accType,
@@ -310,11 +349,14 @@ fun BudgetControlApp() {
                                 eventTargetDateMillis = targetDateMillis,
                                 eventId = eventId,
                                 excludeFromStats = excludeFromStats,
-                                isNecessary = isNecessary
+                                isNecessary = isNecessary,
+                                isRefundExpected = isRefundExpected,
+                                expectedRefundAmount = expectedRefundAmount,
+                                refundNote = refundNote
                             )
                         }
                     },
-                    onUpdateExpense = { id, accType, amount, category, dateMillis, note, merchant, lat, lng, excludeFromStats, isNecessary ->
+                    onUpdateExpense = { id, accType, amount, category, dateMillis, note, merchant, lat, lng, excludeFromStats, isNecessary, isRefundExpected, expectedRefundAmount, refundNote ->
                         val existing = uiState.allExpenses.find { it.id == id }
                         if (existing != null) {
                             val updated = existing.copy(
@@ -327,7 +369,10 @@ fun BudgetControlApp() {
                                 latitude = lat,
                                 longitude = lng,
                                 excludeFromStats = excludeFromStats,
-                                isNecessary = isNecessary
+                                isNecessary = isNecessary,
+                                isRefundExpected = isRefundExpected,
+                                expectedRefundAmount = expectedRefundAmount,
+                                refundNote = refundNote
                             )
                             viewModel.updateExpense(updated)
                         }
@@ -432,6 +477,18 @@ fun BudgetControlApp() {
                     state = uiState,
                     onNavigateUp = { navController.navigateUp() },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) }
+                )
+            }
+
+            composable(Screen.Refunds.route) {
+                com.example.ui.screens.RefundsScreen(
+                    state = uiState,
+                    onProcessRefund = { expense, amount ->
+                        viewModel.processRefund(expense, amount)
+                    },
+                    onCancelRefund = { expense ->
+                        viewModel.cancelRefund(expense)
+                    }
                 )
             }
 

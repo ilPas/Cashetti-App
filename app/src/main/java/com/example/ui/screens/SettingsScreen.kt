@@ -292,7 +292,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = essentialBaselineText,
                             onValueChange = { essentialBaselineText = it },
-                            label = { Text("Spese Essenziali Previste (€)") },
+                            label = { Text("Costi Fissi (€)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -303,6 +303,12 @@ fun SettingsScreen(
                                 focusedLabelColor = MaterialTheme.colorScheme.primary,
                                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
+                        )
+                        Text(
+                            text = "Spese fisse e prevedibili, stesso importo ogni mese (mutuo, utenze, abbonamenti)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                         )
                         OutlinedTextField(
                             value = budgetPersonaleText,
@@ -323,7 +329,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = budgetGinevraText,
                             onValueChange = { budgetGinevraText = it },
-                            label = { Text("Budget Cassetto Casa/Ginevra (€) [con Rollover]") },
+                            label = { Text("Budget Cassetto Familiare (€) [con Rollover]") },
                             placeholder = { Text("es. 180") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
@@ -335,6 +341,12 @@ fun SettingsScreen(
                                 focusedLabelColor = MaterialTheme.colorScheme.primary,
                                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
+                        )
+                        Text(
+                            text = "Spese necessarie per la famiglia/casa ma irregolari — manutenzioni, riparazioni, imprevisti",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                         )
                         OutlinedTextField(
                             value = monthlyInvestmentTargetText,
@@ -497,7 +509,7 @@ fun SettingsScreen(
                             state.categories.forEach { category ->
                                 val accountLabel = when (category.targetAccount) {
                                     "DISCREZIONALE", "DISCREZIONALE_VARIABILE", "SERBATOIO_PERSONALE" -> "Personale"
-                                    "FONDO_EVENTI", "FONDO_EVENTI_DEPOSIT", "SERBATOIO_GINEVRA" -> "Risparmi/Imprevisti"
+                                    "FONDO_EVENTI", "FONDO_EVENTI_DEPOSIT", "SERBATOIO_GINEVRA" -> "Risparmi/Familiare"
                                     "ESSENZIALE_REALE" -> "Costi Fissi"
                                     else -> "Generale"
                                 }
@@ -540,6 +552,39 @@ fun SettingsScreen(
                 val isNotificationListenerEnabled = remember(context) {
                     NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
                 }
+
+                // Diagnostic: Excluded from stats
+                val thirtyDaysAgo = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+                val excludedExpenses = remember(state.allExpenses) {
+                    state.allExpenses.filter { it.excludeFromStats && it.dateMillis >= thirtyDaysAgo }
+                }
+                val excludedCount = excludedExpenses.size
+                val excludedTotal = excludedExpenses.sumOf { kotlin.math.abs(it.amount) }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Diagnostica Esclusioni",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Negli ultimi 30 giorni hai escluso dalle statistiche $excludedCount ${if (excludedCount == 1) "spesa" else "spese"} per un totale di ${String.format(Locale.ITALY, "€ %.2f", excludedTotal)}.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (excludedCount > 5) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),

@@ -53,8 +53,8 @@ fun TransactionDetailDialog(
                 
                 val accountFriendly = when (expense.accountType) {
                     "SERBATOIO_PERSONALE", "DISCREZIONALE_VARIABILE" -> "👤 Cassetto Personale"
-                    "SERBATOIO_GINEVRA" -> "🏠 Fondo Imprevisti / Ginevra"
-                    "ESSENZIALE_REALE" -> "🏢 Costi Fissi Essenziali"
+                    "SERBATOIO_GINEVRA" -> "🏠 Cassetto Familiare"
+                    "ESSENZIALE_REALE" -> "🏢 Costi Fissi"
                     "FONDO_EVENTI_DEPOSIT" -> "🎁 Fondo Risparmi/Eventi (+)"
                     "FONDO_EVENTI_WITHDRAWAL" -> "🎁 Fondo Risparmi/Eventi (-)"
                     else -> expense.accountType

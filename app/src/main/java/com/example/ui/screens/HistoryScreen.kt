@@ -75,7 +75,7 @@ fun HistoryScreen(
     var expenseToView by remember { mutableStateOf<ExpenseEntity?>(null) }
         
     val timeOptions = listOf("Questo Ciclo", "Sempre", "7 Giorni", "30 Giorni", "1 Anno")
-    val specialFilters = listOf("Tutte", "⚡ Solo Grief Spending", "👤 Personale", "🏠 Ginevra", "🏛️ Costi Fissi", "🚫 Spese Eccezionali")
+    val specialFilters = listOf("Tutte", "⚡ Solo Grief Spending", "👤 Personale", "🏠 Familiare", "🏛️ Costi Fissi", "🚫 Spese Eccezionali")
     val categoryOptions = remember(state.allExpenses, state.categories) {
         listOf("Tutte le Categorie") + (state.categories.map { it.name } + state.allExpenses.map { it.category }).distinct().sorted()
     }
@@ -110,7 +110,7 @@ fun HistoryScreen(
             val matchesSpecial = when (selectedSpecialFilter) {
                 "⚡ Solo Grief Spending" -> !exp.isNecessary
                 "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
-                "🏠 Ginevra" -> exp.accountType == "SERBATOIO_GINEVRA"
+                "🏠 Familiare" -> exp.accountType == "SERBATOIO_GINEVRA"
                 "🏛️ Costi Fissi" -> exp.accountType == "ESSENZIALE_REALE"
                 "🚫 Spese Eccezionali" -> exp.excludeFromStats
                 else -> true
@@ -306,7 +306,7 @@ fun HistoryScreen(
                                 color = AppColorPalette.StatusExpense
                             )
                             Text(
-                                text = "Totale: ${String.format(Locale.ITALY, "€ %.2f", griefTotal)} su $griefCount spese contrassegnate come non necessarie.",
+                                text = "Spese d'impulso nel periodo selezionato: ${String.format(Locale.ITALY, "€ %.2f", griefTotal)} ($griefCount movimenti)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppColorPalette.TextPrimary
                             )

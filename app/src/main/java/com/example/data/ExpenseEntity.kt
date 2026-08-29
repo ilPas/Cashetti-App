@@ -18,5 +18,9 @@ data class ExpenseEntity(
     val eventTargetDateMillis: Long? = null,
     val eventId: Long? = null,
     val excludeFromStats: Boolean = false,
-    val isNecessary: Boolean = true
+    val isNecessary: Boolean = true,
+    val isRefundExpected: Boolean = false,
+    val expectedRefundAmount: Double = 0.0,
+    val refundNote: String = "",
+    val isIncome: Boolean = false
 )

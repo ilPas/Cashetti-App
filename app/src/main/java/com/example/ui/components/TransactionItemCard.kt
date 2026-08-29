@@ -44,12 +44,12 @@ fun TransactionItemCard(
     modifier: Modifier = Modifier,
     containerColor: androidx.compose.ui.graphics.Color = AppColorPalette.Surface)
  {
-    val isDeposit = expense.accountType == "FONDO_EVENTI_DEPOSIT" || expense.amount < 0
+    val isDeposit = expense.accountType == "FONDO_EVENTI_DEPOSIT" || expense.amount < 0 || expense.isIncome
     val amountColor = if (isDeposit) AppColorPalette.StatusPositive else when (expense.accountType) {
         "ESSENZIALE_REALE" -> AppColorPalette.StatusFixedCost
         else -> AppColorPalette.StatusExpense
     }
-    val amountSign = if (expense.accountType == "FONDO_EVENTI_DEPOSIT") "+" else "-"
+    val amountSign = if (expense.accountType == "FONDO_EVENTI_DEPOSIT" || expense.isIncome) "+" else "-"
     val absoluteAmount = kotlin.math.abs(expense.amount)
 
     val dateFormat = SimpleDateFormat("dd MMM, HH:mm", Locale.ITALY)
@@ -57,7 +57,7 @@ fun TransactionItemCard(
 
     val accountBadgeText = when (expense.accountType) {
         "SERBATOIO_PERSONALE", "DISCREZIONALE_VARIABILE" -> "👤 Personale"
-        "SERBATOIO_GINEVRA" -> "🏠 Ginevra"
+        "SERBATOIO_GINEVRA" -> "🏠 Familiare"
         "ESSENZIALE_REALE" -> "🏢 Costi fissi"
         "FONDO_EVENTI_DEPOSIT" -> "🎁 Fondo Eventi (+)"
         "FONDO_EVENTI_WITHDRAWAL" -> "🎁 Fondo Eventi (-)"

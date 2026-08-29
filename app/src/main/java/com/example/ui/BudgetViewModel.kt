@@ -3,7 +3,9 @@ package com.example.ui
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
+import android.app.Application
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileWriter
@@ -61,6 +63,7 @@ data class BudgetUiState(
     val eventFundTotalWithdrawals: Double = 0.0,
     val eventFundBalance: Double = 0.0,
     val allExpenses: List<ExpenseEntity> = emptyList(),
+    val pendingRefunds: List<ExpenseEntity> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
     val events: List<EventEntity> = emptyList(),
     val showMonthlySummary: Boolean = false,
@@ -78,6 +81,7 @@ data class BudgetUiState(
     val isInvestmentDone: Boolean = false,
     val avatarUri: String = "",
     val netMonthlyIncome: Double = 2500.0,
+    val netIncomeRemaining: Double = 0.0,
     val currentCycleId: String = "",
     // Grief Spending & Exceptional Expenses
     val griefSpentInCycle: Double = 0.0,
@@ -97,7 +101,7 @@ data class BudgetUiState(
     val driveAuthIntent: android.content.Intent? = null
 )
 
-class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
+class BudgetViewModel(private val repository: BudgetRepository, private val application: Application) : AndroidViewModel(application) {
 
     private val referenceTimeState = MutableStateFlow(System.currentTimeMillis())
     private val isBackupInProgressState = MutableStateFlow(false)
@@ -205,7 +209,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val essentialExpensesInCycle = expensesList.filter { expense ->
             expense.accountType == "ESSENZIALE_REALE"
         }
-        val essentialTotalSpent = essentialExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        val essentialTotalSpent = essentialExpensesInCycle.filter { !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
 
         // --- Cassetto 1 (Personale / Svago) ---
         // Il cassetto personale ha un cap mensile fisso (es. 700€), da cui vengono detratti i costi ricorrenti/abbonamenti
@@ -214,7 +218,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             (expense.accountType == "SERBATOIO_PERSONALE" || expense.accountType == "DISCREZIONALE_VARIABILE") &&
                     expense.dateMillis in cycleStart..cycleEnd
         }
-        val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
         val personaleRemaining = budgetPersonale - recurringTotal - personaleSpent
 
         // --- Cassetto 2 (Fondo Imprevisti / Ginevra con Rollover Dinamico) ---
@@ -234,7 +238,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
                 if (visitedCycles.add(Pair(pStart, pEnd))) {
                     val pSpent = expensesList.filter {
                         it.accountType == "SERBATOIO_GINEVRA" && !it.excludeFromStats && it.dateMillis in pStart..pEnd
-                    }.sumOf { kotlin.math.abs(it.amount) }
+                    }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
                     
                     val cycleSurplus = budgetGinevra - pSpent
                     historicalRollover += cycleSurplus
@@ -248,7 +252,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val ginevraExpensesInCycle = expensesList.filter { expense ->
             expense.accountType == "SERBATOIO_GINEVRA" && expense.dateMillis in cycleStart..cycleEnd
         }
-        val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
         val ginevraRemaining = ginevraTotalAvailable - ginevraSpent
 
         // --- Hero Number: Saldo Dinamico del 'Budget Mensile Spendibile' ---
@@ -264,8 +268,8 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val startOfToday = calendar.timeInMillis
 
         val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
-        val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
-        val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+        val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
+        val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
         
         val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
         val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
@@ -278,18 +282,20 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         val discVariableRemaining = (variableBudgetAvailable + ginevraTotalAvailable) - discVariableSpent
         val discTotalRemaining = totalMonthlySpendable
 
+        val netIncomeRemaining = netIncome - (personaleSpent + ginevraSpent + essentialTotalSpent)
+
         // Warning trigger
         val isLowAlert = totalMonthlySpendable <= 0.20 * (variableBudgetAvailable + ginevraTotalAvailable)
 
         // --- Grief Spending (Acquisti d'Impulso / Non Necessari) ---
         val griefExpensesInCycle = discExpensesInCycle.filter { !it.isNecessary && !it.excludeFromStats }
-        val griefSpentInCycle = griefExpensesInCycle.sumOf { kotlin.math.abs(it.amount) }
+        val griefSpentInCycle = griefExpensesInCycle.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
         val allGriefExpenses = expensesList.filter { !it.isNecessary && !it.excludeFromStats }
-        val totalGriefSpent = allGriefExpenses.sumOf { kotlin.math.abs(it.amount) }
+        val totalGriefSpent = allGriefExpenses.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
 
         // --- Spese Eccezionali (Escluse dalle Statistiche) ---
         val exceptionalExpensesInCycle = expensesList.filter { it.excludeFromStats && it.dateMillis in cycleStart..cycleEnd }
-        val exceptionalTotalSpentInCycle = exceptionalExpensesInCycle.sumOf { kotlin.math.abs(it.amount) }
+        val exceptionalTotalSpentInCycle = exceptionalExpensesInCycle.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
 
         // Event Fund movements
         val eventDeposits = expensesList.filter { it.accountType == "FONDO_EVENTI_DEPOSIT" }
@@ -317,7 +323,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE" || it.accountType == "SERBATOIO_GINEVRA") &&
             !it.excludeFromStats && it.dateMillis in prevCycleStart..prevCycleEnd 
         }
-        val prevSpent = prevExpenses.sumOf { kotlin.math.abs(it.amount) }
+        val prevSpent = prevExpenses.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
         val prevDiff = (budgetPersonale + budgetGinevra) - prevSpent
 
         // Previous-previous cycle
@@ -327,7 +333,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE" || it.accountType == "SERBATOIO_GINEVRA") &&
             !it.excludeFromStats && it.dateMillis in prevPrevCycleStart..prevPrevCycleEnd 
         }
-        val prevPrevSpent = prevPrevExpenses.sumOf { kotlin.math.abs(it.amount) }
+        val prevPrevSpent = prevPrevExpenses.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
 
         BudgetUiState(
             resetDay = resetDaySetting,
@@ -362,6 +368,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             eventFundTotalWithdrawals = totalEventWithdrawals,
             eventFundBalance = eventBalance,
             allExpenses = expensesList,
+            pendingRefunds = expensesList.filter { it.isRefundExpected }.sortedByDescending { it.dateMillis },
             categories = catsList,
             events = eventsList,
             showMonthlySummary = shouldShowSummary,
@@ -379,6 +386,7 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
             isInvestmentDone = isInvestmentDone,
             avatarUri = avatarUri,
             netMonthlyIncome = netIncome,
+            netIncomeRemaining = netIncomeRemaining,
             currentCycleId = currentCycleId,
             griefSpentInCycle = griefSpentInCycle,
             griefExpensesInCycle = griefExpensesInCycle,
@@ -400,6 +408,39 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = BudgetUiState()
     )
+
+    init {
+        viewModelScope.launch {
+            var previousRemaining: Double? = null
+            uiState.collect { state ->
+                if (state.isLoading) return@collect
+                
+                val currentRemaining = state.personaleRemaining
+                val threshold20 = state.variableBudgetAvailable * 0.20
+                
+                if (previousRemaining != null) {
+                    if (previousRemaining!! > threshold20 && currentRemaining <= threshold20 && currentRemaining > 0) {
+                        LocalNotificationHelper.sendNotification(
+                            application, 
+                            "Attenzione al Budget \uD83D\uDEA8", 
+                            "Il saldo del Cassetto Personale è sceso sotto il 20%.",
+                            2002
+                        )
+                    }
+                    if (previousRemaining!! > 0 && currentRemaining <= 0) {
+                        LocalNotificationHelper.sendNotification(
+                            application, 
+                            "Budget Esaurito! \uD83D\uDED1", 
+                            "Il saldo del Cassetto Personale ha raggiunto lo zero.",
+                            2001
+                        )
+                    }
+                }
+                
+                previousRemaining = currentRemaining
+            }
+        }
+    }
 
     fun dismissMonthlySummary(cycleStartMillis: Long) {
         viewModelScope.launch {
@@ -426,7 +467,11 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
         eventTargetDateMillis: Long? = null,
         eventId: Long? = null,
         excludeFromStats: Boolean = false,
-        isNecessary: Boolean = true
+        isNecessary: Boolean = true,
+        isRefundExpected: Boolean = false,
+        expectedRefundAmount: Double = 0.0,
+        refundNote: String = "",
+        isIncome: Boolean = false
     ) {
         viewModelScope.launch {
             repository.insertExpense(
@@ -442,9 +487,48 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
                     eventTargetDateMillis = eventTargetDateMillis,
                     eventId = eventId,
                     excludeFromStats = excludeFromStats,
-                    isNecessary = isNecessary
+                    isNecessary = isNecessary,
+                    isRefundExpected = isRefundExpected,
+                    expectedRefundAmount = expectedRefundAmount,
+                    refundNote = refundNote,
+                    isIncome = isIncome
                 )
             )
+        }
+    }
+
+    fun processRefund(expense: ExpenseEntity, receivedAmount: Double) {
+        viewModelScope.launch {
+            val remainingExpected = expense.expectedRefundAmount - receivedAmount
+            val newIsRefundExpected = remainingExpected > 0
+            val updatedExpense = expense.copy(
+                expectedRefundAmount = if (newIsRefundExpected) remainingExpected else 0.0,
+                isRefundExpected = newIsRefundExpected
+            )
+            repository.updateExpense(updatedExpense)
+            
+            // Create a deposit (negative expense) to refund the original account
+            val refundDeposit = ExpenseEntity(
+                accountType = expense.accountType,
+                amount = -receivedAmount,
+                category = "Rimborso",
+                dateMillis = System.currentTimeMillis(),
+                note = "Rimborso per: ${expense.note.takeIf { it.isNotBlank() } ?: expense.category}",
+                merchant = expense.merchant,
+                excludeFromStats = expense.excludeFromStats,
+                isNecessary = expense.isNecessary
+            )
+            repository.insertExpense(refundDeposit)
+        }
+    }
+
+    fun cancelRefund(expense: ExpenseEntity) {
+        viewModelScope.launch {
+            val updatedExpense = expense.copy(
+                isRefundExpected = false,
+                expectedRefundAmount = 0.0
+            )
+            repository.updateExpense(updatedExpense)
         }
     }
 
@@ -894,11 +978,11 @@ class BudgetViewModel(private val repository: BudgetRepository) : ViewModel() {
     }
 }
 
-class BudgetViewModelFactory(private val repository: BudgetRepository) : ViewModelProvider.Factory {
+class BudgetViewModelFactory(private val repository: BudgetRepository, private val application: Application) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BudgetViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return BudgetViewModel(repository) as T
+            return BudgetViewModel(repository, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

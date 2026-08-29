@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material.icons.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Card
@@ -44,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,7 +92,7 @@ fun StatisticsScreen(
     var expenseToView by remember { mutableStateOf<ExpenseEntity?>(null) }
 
     val periodOptions = listOf("Questo Ciclo", "Ciclo Precedente", "Ultimi 30 Giorni", "Tutto")
-    val accountFilterOptions = listOf("Spese Quotidiane", "👤 Personale", "🏠 Ginevra", "🏛️ Costi Fissi")
+    val accountFilterOptions = listOf("Spese Quotidiane", "👤 Personale", "🏠 Familiare", "🏛️ Costi Fissi")
 
     // Determine Time Range based on Selected Period
     val now = System.currentTimeMillis()
@@ -115,7 +117,7 @@ fun StatisticsScreen(
             val matchesTime = exp.dateMillis in cycleStart..cycleEnd
             val matchesAccount = when (selectedAccountFilter) {
                 "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
-                "🏠 Ginevra" -> exp.accountType == "SERBATOIO_GINEVRA"
+                "🏠 Familiare" -> exp.accountType == "SERBATOIO_GINEVRA"
                 "🏛️ Costi Fissi" -> exp.accountType == "ESSENZIALE_REALE"
                 "Spese Quotidiane" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE" || exp.accountType == "SERBATOIO_GINEVRA"
                 else -> true
@@ -283,6 +285,129 @@ fun StatisticsScreen(
     }
     val necessaryPercentage = remember(totalSpent, necessarySpent) {
         if (totalSpent > 0) (necessarySpent / totalSpent) * 100 else 100.0
+    }
+
+    val consecutiveNoSpendDays = remember(state.allExpenses) {
+        val personalExpenses = state.allExpenses.filter { 
+            (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE") && !it.excludeFromStats
+        }
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        
+        var streak = 0
+        var currentDateMillis = cal.timeInMillis
+        
+        while (true) {
+            val endOfDay = currentDateMillis + 24 * 60 * 60 * 1000 - 1
+            val expensesOnDay = personalExpenses.filter { it.dateMillis in currentDateMillis..endOfDay }
+            if (expensesOnDay.isEmpty()) {
+                streak++
+                currentDateMillis -= 24 * 60 * 60 * 1000
+            } else {
+                break
+            }
+        }
+        streak
+    }
+
+    val peakDayOfWeek = remember(filteredExpenses) {
+        if (filteredExpenses.isEmpty()) return@remember Pair("Nessuno", 0.0)
+        
+        val expensesByDayOfWeek = filteredExpenses.groupBy { 
+            val c = Calendar.getInstance()
+            c.timeInMillis = it.dateMillis
+            c.get(Calendar.DAY_OF_WEEK)
+        }
+        
+        val averageByDay = expensesByDayOfWeek.mapValues { (_, expenses) ->
+            val uniqueDates = expenses.map { 
+                val c = Calendar.getInstance()
+                c.timeInMillis = it.dateMillis
+                c.set(Calendar.HOUR_OF_DAY, 0)
+                c.set(Calendar.MINUTE, 0)
+                c.set(Calendar.SECOND, 0)
+                c.set(Calendar.MILLISECOND, 0)
+                c.timeInMillis
+            }.distinct().size
+            
+            val totalSpentDay = expenses.sumOf { kotlin.math.abs(it.amount) }
+            totalSpentDay / uniqueDates.coerceAtLeast(1)
+        }
+        
+        val maxDay = averageByDay.maxByOrNull { it.value }
+        if (maxDay != null) {
+            val dayName = when (maxDay.key) {
+                Calendar.MONDAY -> "Lunedì"
+                Calendar.TUESDAY -> "Martedì"
+                Calendar.WEDNESDAY -> "Mercoledì"
+                Calendar.THURSDAY -> "Giovedì"
+                Calendar.FRIDAY -> "Venerdì"
+                Calendar.SATURDAY -> "Sabato"
+                Calendar.SUNDAY -> "Domenica"
+                else -> ""
+            }
+            Pair(dayName, maxDay.value)
+        } else {
+            Pair("Nessuno", 0.0)
+        }
+    }
+
+    val previousPeriodComparison = remember(selectedPeriod, state.allExpenses, cycleStart, cycleEnd, totalSpent, selectedAccountFilter) {
+        val prevStart: Long
+        val prevEnd: Long
+        when (selectedPeriod) {
+            "Questo Ciclo", "Ciclo Precedente" -> {
+                val cal = Calendar.getInstance().apply {
+                    timeInMillis = cycleStart
+                    add(Calendar.DAY_OF_MONTH, -5)
+                }
+                val (ps, pe) = BillingCycleUtils.getCycleRange(cal.timeInMillis, state.resetDay)
+                prevStart = ps
+                prevEnd = pe
+            }
+            "Ultimi 30 Giorni" -> {
+                prevEnd = cycleStart - 1
+                prevStart = prevEnd - 30L * 24 * 60 * 60 * 1000 + 1
+            }
+            else -> {
+                prevStart = 0L
+                prevEnd = 0L
+            }
+        }
+        
+        if (prevStart == 0L) {
+            null
+        } else {
+            val prevExpenses = state.allExpenses.filter { exp ->
+                val matchesTime = exp.dateMillis in prevStart..prevEnd
+                val matchesAccount = when (selectedAccountFilter) {
+                    "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
+                    "🏠 Familiare" -> exp.accountType == "SERBATOIO_GINEVRA"
+                    "🏛️ Costi Fissi" -> exp.accountType == "ESSENZIALE_REALE"
+                    "Spese Quotidiane" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE" || exp.accountType == "SERBATOIO_GINEVRA"
+                    else -> true
+                }
+                matchesTime && matchesAccount && !exp.excludeFromStats
+            }
+            val prevTotal = prevExpenses.sumOf { kotlin.math.abs(it.amount) }
+            val delta = totalSpent - prevTotal
+            val percentage = if (prevTotal > 0) (delta / prevTotal) * 100 else if (totalSpent > 0) 100.0 else 0.0
+            Triple(prevTotal, delta, percentage)
+        }
+    }
+
+    val topMerchants = remember(filteredExpenses) {
+        filteredExpenses
+            .filter { it.merchant.isNotBlank() }
+            .groupBy { it.merchant.trim() }
+            .map { (merchant, expenses) ->
+                merchant to expenses.sumOf { kotlin.math.abs(it.amount) }
+            }
+            .sortedByDescending { it.second }
+            .take(5)
     }
 
     val selectedDayData = daysData.getOrNull(activeDayIndex)
@@ -509,6 +634,55 @@ fun StatisticsScreen(
                 }
             }
 
+            // Custom KPIs Row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Consecutive No-Spend (Personal)
+                    StatKpiCard(
+                        title = "Streak No-Spend",
+                        value = "$consecutiveNoSpendDays giorni",
+                        subtitle = "Senza spese personali",
+                        icon = Icons.Outlined.CheckCircle,
+                        iconTint = AppColorPalette.StatusSaving,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Peak Day Of Week
+                    StatKpiCard(
+                        title = "Giorno di Punta",
+                        value = peakDayOfWeek.first,
+                        subtitle = "Media: ${String.format(Locale.ITALY, "€ %.2f", peakDayOfWeek.second)}",
+                        icon = Icons.Outlined.CalendarMonth,
+                        iconTint = AppColorPalette.Secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // Previous Cycle Comparison
+            item {
+                if (previousPeriodComparison != null) {
+                    val (prevTotal, delta, percentage) = previousPeriodComparison
+                    val isSurplus = delta <= 0
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        StatKpiCard(
+                            title = "Confronto Periodo Precedente",
+                            value = String.format(Locale.ITALY, "%s€ %.2f", if(delta > 0) "+" else "", delta),
+                            subtitle = String.format(Locale.ITALY, "%s%.1f%% (prec. € %.2f)", if(percentage > 0) "+" else "", percentage, prevTotal),
+                            icon = if (isSurplus) Icons.Outlined.TrendingDown else Icons.Outlined.TrendingUp,
+                            iconTint = if (isSurplus) AppColorPalette.StatusSaving else AppColorPalette.StatusExpense,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
             // Quality of Spending (Grief / Necessity analysis)
             item {
                 Card(
@@ -592,6 +766,77 @@ fun StatisticsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = AppColorPalette.TextSecondary
                             )
+                        }
+                    }
+                }
+            }
+
+            if (topMerchants.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Spese per Luogo (Top 5 Esercenti)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColorPalette.TextPrimary,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = AppColorPalette.SurfaceCard)
+                    ) {
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            topMerchants.forEachIndexed { index, (merchant, amount) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = AppColorPalette.Primary.copy(alpha = 0.1f),
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Storefront,
+                                                contentDescription = null,
+                                                tint = AppColorPalette.Primary,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = merchant,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColorPalette.TextPrimary,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Text(
+                                        text = String.format(Locale.ITALY, "€ %.2f", amount),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AppColorPalette.TextPrimary
+                                    )
+                                }
+                                if (index < topMerchants.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        color = AppColorPalette.TextSecondary.copy(alpha = 0.1f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

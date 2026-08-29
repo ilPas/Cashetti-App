@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoneyOff
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Refresh
@@ -70,9 +71,11 @@ import java.util.Locale
 fun DashboardScreen(
     state: BudgetUiState,
     onNavigateToAddExpense: () -> Unit,
+    onNavigateToAddIncome: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToEventFund: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToRefunds: () -> Unit,
     onUpdateAvatar: (String) -> Unit,
     onDismissMonthlySummary: (Long) -> Unit,
     onNavigateToEditExpense: (Long) -> Unit,
@@ -262,6 +265,73 @@ fun DashboardScreen(
                         )
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                val spentIncome = state.netMonthlyIncome - state.netIncomeRemaining
+                val incomeProgress = if (state.netMonthlyIncome > 0) (spentIncome / state.netMonthlyIncome).toFloat().coerceIn(0f, 1f) else 0f
+                val progressColor = when {
+                    incomeProgress < 0.5f -> AppColorPalette.StatusSaving
+                    incomeProgress <= 0.8f -> AppColorPalette.StatusWarning
+                    else -> AppColorPalette.StatusExpense
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = AppColorPalette.SurfaceCard.copy(alpha = 0.2f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Consumo Reddito",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AppColorPalette.TextPrimary.copy(alpha = 0.9f)
+                            )
+                            Text(
+                                text = "Residuo: ${String.format(Locale.ITALY, "€ %.2f", state.netIncomeRemaining)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (state.netIncomeRemaining >= 0) AppColorPalette.TextPrimary else AppColorPalette.StatusExpense
+                            )
+                        }
+                        
+                        LinearProgressIndicator(
+                            progress = { incomeProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = progressColor,
+                            trackColor = AppColorPalette.SurfaceCardDark.copy(alpha = 0.5f)
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = String.format(Locale.ITALY, "€ %.2f", spentIncome),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColorPalette.TextSecondary
+                            )
+                            Text(
+                                text = String.format(Locale.ITALY, "€ %.2f", state.netMonthlyIncome),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppColorPalette.TextSecondary
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -276,6 +346,53 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
+                // Pending Refunds Banner
+                if (state.pendingRefunds.isNotEmpty()) {
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToRefunds() },
+                            shape = RoundedCornerShape(16.dp),
+                            color = AppColorPalette.Primary.copy(alpha = 0.1f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MoneyOff,
+                                        contentDescription = null,
+                                        tint = AppColorPalette.Primary
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Rimborsi in attesa",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AppColorPalette.Primary
+                                        )
+                                        Text(
+                                            text = "Hai ${state.pendingRefunds.size} rimborsi pendenti",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppColorPalette.TextSecondary
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.ArrowForward,
+                                    contentDescription = "Visualizza",
+                                    tint = AppColorPalette.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Macro-feature 4: Architettura a Doppio Cassetto (Personale vs Ginevra)
                 item {
                     Text(
@@ -401,7 +518,7 @@ fun DashboardScreen(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Ginevra/Casa",
+                                            text = "Familiare",
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = AppColorPalette.StatusSaving
@@ -522,24 +639,24 @@ fun DashboardScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(52.dp),
                             shape = RoundedCornerShape(16.dp),
-                            color = AppColorPalette.SurfaceCard,
-                            onClick = onNavigateToHistory
+                            color = Color(0xFF10B981),
+                            onClick = onNavigateToAddIncome
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Icon(Icons.Outlined.History, contentDescription = null, tint = AppColorPalette.TextPrimary)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Storico & Report", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = AppColorPalette.TextPrimary)
+                                Icon(Icons.Outlined.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Entrata", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
 
@@ -556,9 +673,9 @@ fun DashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Icon(Icons.Outlined.Add, contentDescription = null, tint = AppColorPalette.TextPrimary)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Nuova Spesa", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = AppColorPalette.TextPrimary)
+                                Icon(Icons.Outlined.Add, contentDescription = null, tint = AppColorPalette.TextPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Spesa", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = AppColorPalette.TextPrimary)
                             }
                         }
                     }
