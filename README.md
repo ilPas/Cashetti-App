@@ -12,6 +12,7 @@ L'applicazione si basa su pilastri contabili distinti per evitare l'attrito cogn
 * **👤 Cassetto Personale**: Budget discrezionale mensile (es. 700 €) dedicato allo svago, uscite e spese individuali. Si resetta ad ogni ciclo mensile e assorbe gli abbonamenti attivi.
 * **🏠 Cassetto Casa / Ginevra (con Rollover)**: Fondo dedicato a imprevisti domestici e spese condivise (es. 180 €). Integra un algoritmo di **Rollover dinamico cumulativo**: i fondi non spesi nei cicli precedenti si accumulano automaticamente come disponibilità extra, mentre gli sforamenti passati vengono recuperati.
 * **✨ Saldo Hero (Home)**: Calcola in tempo reale la somma spendibile disponibile tra i due cassetti.
+* **📥 Gestione Entrate**: Motore finanziario bidirezionale per registrare entrate extra, aumentando dinamicamente il saldo residuo di un cassetto nel ciclo in corso.
 
 ### 2. Costi Fissi (Baseline Permanente)
 * Pannello dedicato alle spese strutturali ricorrenti (affitto, bollette, assicurazioni, rate).
@@ -33,6 +34,7 @@ L'applicazione si basa su pilastri contabili distinti per evitare l'attrito cogn
 
 * **⚡ Intercettazione Notifiche di Pagamento**: Servizio in background (`PaymentNotificationListenerService`) per catturare automaticamente le notifiche inviate da app bancarie e fintech (PayPal, Revolut, Intesa, Sella, N26, Hype, Scalapay, Apple/Google Pay) ed estrarre importo e merchant.
 * **🤖 Integrazione Gemini AI**: Assistente intelligente integrato (`GeminiApiService`) per categorizzare automaticamente le transazioni e analizzare note o scontrini.
+* **🔄 Gestione Rimborsi**: Flusso nativo per segnalare spese con rimborsi attesi e processarli (totalmente o parzialmente) storicamente e finanziariamente.
 * **💾 Backup & Ripristino Dati**:
   * **Backup Locale JSON (Offline/Sicuro)**: Esportazione e importazione istantanea con un click dell'intero database in formato `.json`.
   * **Google Drive Sync**: Integrazione cloud per salvataggio automatico e ripristino multi-dispositivo.
@@ -68,7 +70,7 @@ app/src/main/java/com/example/
 │   ├── AppDatabase.kt                   # Database Room e istanza singleton
 │   ├── BudgetDao.kt                     # Query SQL reattive per spese, categorie, impostazioni
 │   ├── BudgetRepository.kt              # Repository pattern per la sincronizzazione dei dati
-│   ├── ExpenseEntity.kt                 # Modello spesa (Cassetto, Importo, Grief spending, Note)
+│   ├── ExpenseEntity.kt                 # Modello transazione (Cassetto, Importo, Entrate, Grief, Rimborsi)
 │   ├── SubscriptionEntity.kt            # Modello abbonamenti ricorrenti
 │   ├── SettingEntity.kt                 # Modello configurazioni chiave/valore
 │   ├── GeminiApiService.kt              # Client API per l'integrazione Gemini
@@ -81,12 +83,14 @@ app/src/main/java/com/example/
 │   ├── screens/
 │   │   ├── DashboardScreen.kt           # Panoramica home, Hero balance e schede Cassetti
 │   │   ├── AddExpenseScreen.kt          # Form inserimento manuale spesa/movimento
+│   │   ├── AddIncomeScreen.kt           # Form dedicato per la registrazione delle entrate extra
 │   │   ├── EssentialScreen.kt           # Gestione costi fissi strutturali
 │   │   ├── SubscriptionsScreen.kt       # Gestione abbonamenti mensili
 │   │   ├── HistoryScreen.kt             # Storico transazioni e accesso rapido statistiche
 │   │   ├── StatisticsScreen.kt          # Sezione dedicata statistiche avanzate (Matrice, Donut, Burn-rate)
 │   │   ├── EventFundScreen.kt           # Gestione Fondo Risparmi ed Eventi
 │   │   ├── PlanningScreen.kt            # Pianificazione budget ed estimatori
+│   │   ├── RefundsScreen.kt             # Gestione dei rimborsi attesi e ricevuti
 │   │   ├── SettingsScreen.kt            # Impostazioni generali, backup e parametri
 │   │   └── NotificationLogsScreen.kt    # Log delle notifiche catturate
 │   ├── components/                      # Componenti riutilizzabili (Dialog, Card, Badge)

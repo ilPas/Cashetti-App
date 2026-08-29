@@ -122,7 +122,7 @@ fun StatisticsScreen(
                 "Spese Quotidiane" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE" || exp.accountType == "SERBATOIO_GINEVRA"
                 else -> true
             }
-            matchesTime && matchesAccount && !exp.excludeFromStats
+            matchesTime && matchesAccount && !exp.excludeFromStats && !exp.isIncome
         }
     }
 
@@ -289,7 +289,7 @@ fun StatisticsScreen(
 
     val consecutiveNoSpendDays = remember(state.allExpenses) {
         val personalExpenses = state.allExpenses.filter { 
-            (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE") && !it.excludeFromStats
+            (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE") && !it.excludeFromStats && !it.isIncome
         }
         val cal = Calendar.getInstance()
         cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -390,7 +390,7 @@ fun StatisticsScreen(
                     "Spese Quotidiane" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE" || exp.accountType == "SERBATOIO_GINEVRA"
                     else -> true
                 }
-                matchesTime && matchesAccount && !exp.excludeFromStats
+                matchesTime && matchesAccount && !exp.excludeFromStats && !exp.isIncome
             }
             val prevTotal = prevExpenses.sumOf { kotlin.math.abs(it.amount) }
             val delta = totalSpent - prevTotal

@@ -268,10 +268,11 @@ class BudgetViewModel(private val repository: BudgetRepository, private val appl
         val startOfToday = calendar.timeInMillis
 
         val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
-        val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
-        val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
+        val cycleIncomes = allExpensesInCycle.filter { it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
+        val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats && !it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
+        val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats && !it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
         
-        val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
+        val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable + cycleIncomes
         val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
         val startOfDayDailyBudget = if (daysRemainingInCycle > 0) remainingBeforeToday / daysRemainingInCycle else remainingBeforeToday
         val dailyBudget = startOfDayDailyBudget - spentToday

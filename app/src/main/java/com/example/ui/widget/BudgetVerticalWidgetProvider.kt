@@ -61,7 +61,7 @@ class BudgetVerticalWidgetProvider : AppWidgetProvider() {
                         (it.accountType == "SERBATOIO_PERSONALE" || it.accountType == "DISCREZIONALE_VARIABILE") && 
                         it.dateMillis in cycleStart..cycleEnd 
                     }
-                    val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    val personaleSpent = personaleExpensesInCycle.filter { !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
                     
                     val subs = repo.allSubscriptions.first()
                     val recurringTotal = subs.filter { it.isActive }.sumOf { it.amount }
@@ -81,7 +81,7 @@ class BudgetVerticalWidgetProvider : AppWidgetProvider() {
                             if (visitedCycles.add(Pair(pStart, pEnd))) {
                                 val pSpent = expenses.filter {
                                     it.accountType == "SERBATOIO_GINEVRA" && !it.excludeFromStats && it.dateMillis in pStart..pEnd
-                                }.sumOf { kotlin.math.abs(it.amount) }
+                                }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
                                 historicalRollover += (budgetGinevra - pSpent)
                             }
                             testRef = pStart - 1000L
@@ -93,7 +93,7 @@ class BudgetVerticalWidgetProvider : AppWidgetProvider() {
                     val ginevraExpensesInCycle = expenses.filter { 
                         it.accountType == "SERBATOIO_GINEVRA" && it.dateMillis in cycleStart..cycleEnd 
                     }
-                    val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    val ginevraSpent = ginevraExpensesInCycle.filter { !it.excludeFromStats }.sumOf { if (it.isIncome) -kotlin.math.abs(it.amount) else kotlin.math.abs(it.amount) }
                     
                     val ginevraRemaining = ginevraTotalAvailable - ginevraSpent
 
@@ -110,10 +110,11 @@ class BudgetVerticalWidgetProvider : AppWidgetProvider() {
 
                     val allExpensesInCycle = (personaleExpensesInCycle + ginevraExpensesInCycle).distinctBy { it.id }
                     
-                    val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
-                    val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats }.sumOf { kotlin.math.abs(it.amount) }
+                    val cycleIncomes = allExpensesInCycle.filter { it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
+                    val spentBeforeToday = allExpensesInCycle.filter { it.dateMillis < startOfToday && !it.excludeFromStats && !it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
+                    val spentToday = allExpensesInCycle.filter { it.dateMillis >= startOfToday && !it.excludeFromStats && !it.isIncome }.sumOf { kotlin.math.abs(it.amount) }
 
-                    val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable
+                    val totalAvailableInCycle = (budgetPersonale - recurringTotal) + ginevraTotalAvailable + cycleIncomes
                     val remainingBeforeToday = totalAvailableInCycle - spentBeforeToday
                     
                     val startOfDayDailyBudget = if (daysRemaining > 0) remainingBeforeToday / daysRemaining else remainingBeforeToday
