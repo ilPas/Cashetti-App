@@ -84,13 +84,13 @@ fun StatisticsScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedPeriod by remember { mutableStateOf("Questo Ciclo") }
-    var selectedAccountFilter by remember { mutableStateOf("Tutti i Conti") }
+    var selectedAccountFilter by remember { mutableStateOf("Spese Quotidiane") }
     var isPeriodDropdownOpen by remember { mutableStateOf(false) }
     var selectedDayIndex by remember { mutableIntStateOf(-1) }
     var expenseToView by remember { mutableStateOf<ExpenseEntity?>(null) }
 
     val periodOptions = listOf("Questo Ciclo", "Ciclo Precedente", "Ultimi 30 Giorni", "Tutto")
-    val accountFilterOptions = listOf("Tutti i Conti", "👤 Personale", "🏠 Ginevra", "🏛️ Costi Fissi")
+    val accountFilterOptions = listOf("Spese Quotidiane", "👤 Personale", "🏠 Ginevra", "🏛️ Costi Fissi")
 
     // Determine Time Range based on Selected Period
     val now = System.currentTimeMillis()
@@ -117,7 +117,8 @@ fun StatisticsScreen(
                 "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
                 "🏠 Ginevra" -> exp.accountType == "SERBATOIO_GINEVRA"
                 "🏛️ Costi Fissi" -> exp.accountType == "ESSENZIALE_REALE"
-                else -> !exp.excludeFromStats
+                "Spese Quotidiane" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE" || exp.accountType == "SERBATOIO_GINEVRA"
+                else -> true
             }
             matchesTime && matchesAccount && !exp.excludeFromStats
         }

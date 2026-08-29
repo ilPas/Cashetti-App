@@ -75,9 +75,9 @@ fun HistoryScreen(
     var expenseToView by remember { mutableStateOf<ExpenseEntity?>(null) }
         
     val timeOptions = listOf("Questo Ciclo", "Sempre", "7 Giorni", "30 Giorni", "1 Anno")
-    val specialFilters = listOf("Tutte", "⚡ Solo Grief Spending", "👤 Personale", "🏠 Ginevra", "🚫 Spese Eccezionali")
-    val categoryOptions = remember(state.categories) {
-        listOf("Tutte le Categorie") + state.categories.map { it.name }.distinct()
+    val specialFilters = listOf("Tutte", "⚡ Solo Grief Spending", "👤 Personale", "🏠 Ginevra", "🏛️ Costi Fissi", "🚫 Spese Eccezionali")
+    val categoryOptions = remember(state.allExpenses, state.categories) {
+        listOf("Tutte le Categorie") + (state.categories.map { it.name } + state.allExpenses.map { it.category }).distinct().sorted()
     }
         
     val filteredExpenses = remember(
@@ -111,11 +111,12 @@ fun HistoryScreen(
                 "⚡ Solo Grief Spending" -> !exp.isNecessary
                 "👤 Personale" -> exp.accountType == "SERBATOIO_PERSONALE" || exp.accountType == "DISCREZIONALE_VARIABILE"
                 "🏠 Ginevra" -> exp.accountType == "SERBATOIO_GINEVRA"
+                "🏛️ Costi Fissi" -> exp.accountType == "ESSENZIALE_REALE"
                 "🚫 Spese Eccezionali" -> exp.excludeFromStats
-                else -> exp.accountType != "ESSENZIALE_REALE"
+                else -> true
             }
 
-            matchesCategory && matchesSearch && matchesTime && matchesSpecial && exp.accountType != "ESSENZIALE_REALE"
+            matchesCategory && matchesSearch && matchesTime && matchesSpecial
         }.sortedByDescending { it.dateMillis }
     }
     
@@ -333,6 +334,34 @@ fun HistoryScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.bodySmall
                         )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Category Filters
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.FilterList, contentDescription = null, tint = AppColorPalette.TextSecondary, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(categoryOptions) { catOpt ->
+                        val isSelected = selectedCategoryFilter == catOpt
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) AppColorPalette.Secondary else AppColorPalette.SurfaceCard,
+                            modifier = Modifier.clickable { selectedCategoryFilter = catOpt }
+                        ) {
+                            Text(
+                                text = catOpt,
+                                color = if (isSelected) AppColorPalette.TextPrimary else AppColorPalette.TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
